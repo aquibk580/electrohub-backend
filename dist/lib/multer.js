@@ -3,7 +3,7 @@ const storage = multer.memoryStorage();
 const fileFilter = (req, file, cb) => {
     const files = req.files;
     const filesCount = files ? files.length : 0;
-    if (filesCount >= 5) {
+    if (filesCount > 5) {
         return cb(new Error("You can upload up to 5 files only."));
     }
     if (file.mimetype.startsWith("image/")) {

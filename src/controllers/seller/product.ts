@@ -4,6 +4,7 @@ import { db } from "../../lib/db.js";
 import cloudinary, { uploadToCloudinary } from "../../lib/cloudinary.js";
 import { validateFile } from "../../lib/validateFile.js";
 import { ProductStatus } from "@prisma/client";
+import { UserPayload } from "../../types/Payload.js";
 
 const detailsSchema = z.array(
   z.object({
@@ -565,6 +566,7 @@ async function getSingleProduct(req: Request, res: Response) {
   try {
     const { productId } = req.params;
     const ProductId = parseInt(productId, 10);
+    const sellerId = parseInt((req.user as UserPayload).id);
 
     if (isNaN(ProductId)) {
       res.status(400).json({ error: "Missing or Invalid product id" });
@@ -574,6 +576,7 @@ async function getSingleProduct(req: Request, res: Response) {
     const product: ProductDB | null = await db.product.findUnique({
       where: {
         id: ProductId,
+        sellerId,
       },
       include: {
         images: true,

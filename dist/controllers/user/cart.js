@@ -26,7 +26,20 @@ async function getAllCartItems(req, res) {
                 cartId: cart.id,
             },
         });
-        res.status(200).json(cartItems);
+        const productIds = cartItems.map((cartItem) => cartItem.productId);
+        const products = await db.product.findMany({
+            where: { id: { in: productIds } },
+            include: { images: true, productInfo: true, reviews: true },
+        });
+        const productsWithCartItemId = products.map((product) => {
+            const cartItem = cartItems.find((item) => item.productId === product.id);
+            return {
+                ...product,
+                cartItemId: cartItem?.id,
+                quantity: cartItem?.quantity || 1,
+            };
+        });
+        res.status(200).json({ products: productsWithCartItemId });
         return;
     }
     catch (error) {
@@ -66,17 +79,43 @@ async function addToCart(req, res) {
         else {
             cart = existingCart;
         }
-        const cartItem = await db.cartItem.create({
-            data: {
-                cartId: cart.id,
+        const existingCartItem = await db.cartItem.findUnique({
+            where: {
                 productId: ProductId,
-                quantity: parsedQuantity,
             },
         });
-        res
-            .status(200)
-            .json({ message: "Item Added to the cart successfully", cart, cartItem });
-        return;
+        let cartItem;
+        if (existingCartItem) {
+            cartItem = await db.cartItem.update({
+                where: {
+                    productId: ProductId,
+                },
+                data: {
+                    quantity: existingCartItem.quantity + 1,
+                },
+            });
+            res.status(200).json({
+                message: "Product quantity increased successfully",
+                cart,
+                cartItem,
+            });
+            return;
+        }
+        else {
+            cartItem = await db.cartItem.create({
+                data: {
+                    cartId: cart.id,
+                    productId: ProductId,
+                    quantity: parsedQuantity,
+                },
+            });
+            res.status(200).json({
+                message: "Product Added to the cart successfully",
+                cart,
+                cartItem,
+            });
+            return;
+        }
     }
     catch (err) {
         if (err.name === "ZodError") {
@@ -113,4 +152,44 @@ async function removeCartItem(req, res) {
         return;
     }
 }
-export { addToCart, removeCartItem, getAllCartItems };
+// update cartitem quantity
+async function updateCartitem(req, res) {
+    try {
+        const { cartItemId } = req.params;
+        const { quantity } = req.body;
+        const parsedCartItemId = parseInt(cartItemId, 10);
+        const parsedQuantity = parseInt(quantity, 10);
+        if (isNaN(parsedCartItemId) ||
+            isNaN(parsedQuantity) ||
+            parsedQuantity < 1) {
+            res.status(400).json({ error: "Invalid CartItemId or quantity" });
+            return;
+        }
+        const cartItem = await db.cartItem.findUnique({
+            where: { id: parsedCartItemId },
+        });
+        if (!cartItem) {
+            res.status(404).json({ error: "Cart item not found" });
+            return;
+        }
+        const updatedCartItem = await db.cartItem.update({
+            where: { id: parsedCartItemId },
+            data: { quantity: parsedQuantity },
+        });
+        res
+            .status(200)
+            .json({
+            message: "Quantity updated successfully",
+            cartItem: updatedCartItem,
+        });
+        return;
+    }
+    catch (error) {
+        console.error(error);
+        res
+            .status(500)
+            .json({ error: "Internal Server Error", details: error.message });
+        return;
+    }
+}
+export { addToCart, removeCartItem, getAllCartItems, updateCartitem };

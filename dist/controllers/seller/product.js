@@ -457,6 +457,7 @@ async function getSingleProduct(req, res) {
     try {
         const { productId } = req.params;
         const ProductId = parseInt(productId, 10);
+        const sellerId = parseInt(req.user.id);
         if (isNaN(ProductId)) {
             res.status(400).json({ error: "Missing or Invalid product id" });
             return;
@@ -464,6 +465,7 @@ async function getSingleProduct(req, res) {
         const product = await db.product.findUnique({
             where: {
                 id: ProductId,
+                sellerId,
             },
             include: {
                 images: true,

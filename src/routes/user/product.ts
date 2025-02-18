@@ -3,6 +3,7 @@ import {
   deleteReview,
   deleteReviewImage,
   getAllProducts,
+  getSingleProduct,
   sendReview,
 } from "../../controllers/user/product.js";
 import { isLoggedIn } from "../../middlewares/auth.js";
@@ -12,6 +13,9 @@ const router: Router = Router();
 
 // Get all products
 router.get("/", getAllProducts);
+
+// Get single Product
+router.get("/:productId", getSingleProduct);
 
 // review a product
 router.post(

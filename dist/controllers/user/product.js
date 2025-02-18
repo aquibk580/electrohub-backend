@@ -11,7 +11,11 @@ const extractPublicId = (url) => {
 async function getAllProducts(req, res) {
     try {
         const products = await db.product.findMany({
-            include: { images: true, productInfo: true, reviews: true },
+            include: {
+                images: true,
+                productInfo: true,
+                reviews: true,
+            },
         });
         if (products.length === 0) {
             res.status(404).json({ error: "No products available" });
@@ -25,6 +29,43 @@ async function getAllProducts(req, res) {
         res
             .status(500)
             .json({ error: "Internal server error", details: error.message });
+    }
+}
+// Get single product of a single seller
+async function getSingleProduct(req, res) {
+    try {
+        const { productId } = req.params;
+        const ProductId = parseInt(productId, 10);
+        if (isNaN(ProductId)) {
+            res.status(400).json({ error: "Missing or Invalid product id" });
+            return;
+        }
+        const product = await db.product.findUnique({
+            where: {
+                id: ProductId,
+            },
+            include: {
+                images: true,
+                productInfo: true,
+                reviews: {
+                    include: {
+                        user: true,
+                    },
+                },
+            },
+        });
+        if (!product) {
+            res.status(404).json({ error: "Product not found" });
+            return;
+        }
+        res.status(200).json(product);
+        return;
+    }
+    catch (error) {
+        res
+            .status(500)
+            .json({ error: "Internal Server Error", details: error.message });
+        return;
     }
 }
 const reviewSchema = z.object({
@@ -223,4 +264,4 @@ async function deleteReviewImage(req, res) {
         return;
     }
 }
-export { getAllProducts, sendReview, deleteReview, updateReveiw, deleteReviewImage, };
+export { getAllProducts, sendReview, deleteReview, updateReveiw, deleteReviewImage, getSingleProduct, };

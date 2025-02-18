@@ -31,7 +31,11 @@ const extractPublicId = (url: string): string => {
 async function getAllProducts(req: Request, res: Response) {
   try {
     const products: Array<ProductDB> = await db.product.findMany({
-      include: { images: true, productInfo: true, reviews: true },
+      include: {
+        images: true,
+        productInfo: true,
+        reviews: true,
+      },
     });
 
     if (products.length === 0) {
@@ -47,6 +51,47 @@ async function getAllProducts(req: Request, res: Response) {
     res
       .status(500)
       .json({ error: "Internal server error", details: error.message });
+  }
+}
+
+// Get single product of a single seller
+async function getSingleProduct(req: Request, res: Response) {
+  try {
+    const { productId } = req.params;
+    const ProductId = parseInt(productId, 10);
+
+    if (isNaN(ProductId)) {
+      res.status(400).json({ error: "Missing or Invalid product id" });
+      return;
+    }
+
+    const product: ProductDB | null = await db.product.findUnique({
+      where: {
+        id: ProductId,
+      },
+      include: {
+        images: true,
+        productInfo: true,
+        reviews: {
+          include: {
+            user: true,
+          },
+        },
+      },
+    });
+
+    if (!product) {
+      res.status(404).json({ error: "Product not found" });
+      return;
+    }
+
+    res.status(200).json(product);
+    return;
+  } catch (error: any) {
+    res
+      .status(500)
+      .json({ error: "Internal Server Error", details: error.message });
+    return;
   }
 }
 
@@ -318,4 +363,5 @@ export {
   deleteReview,
   updateReveiw,
   deleteReviewImage,
+  getSingleProduct,
 };

@@ -1,10 +1,12 @@
 import { Router } from "express";
-import { deleteReview, deleteReviewImage, getAllProducts, sendReview, } from "../../controllers/user/product.js";
+import { deleteReview, deleteReviewImage, getAllProducts, getSingleProduct, sendReview, } from "../../controllers/user/product.js";
 import { isLoggedIn } from "../../middlewares/auth.js";
 import { upload } from "../../lib/multer.js";
 const router = Router();
 // Get all products
 router.get("/", getAllProducts);
+// Get single Product
+router.get("/:productId", getSingleProduct);
 // review a product
 router.post("/:productId/review", isLoggedIn, upload.array("images", 3), sendReview);
 // Delete a review
