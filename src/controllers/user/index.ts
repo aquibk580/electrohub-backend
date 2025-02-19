@@ -117,7 +117,7 @@ type UpdateUserType = {
 };
 
 // Update user details
-async function updateuserDetails(req: Request, res: Response) {
+async function updateUserDetails(req: Request, res: Response) {
   const { id } = req.params;
   const userId = parseInt(id, 10);
 
@@ -127,42 +127,25 @@ async function updateuserDetails(req: Request, res: Response) {
   }
 
   try {
-    const userData: UpdateUserType = await userSchema.parse(req.body);
-    const user = await db.user.findUnique({
-      where: {
-        id: userId,
-      },
-    });
+    const userData: UpdateUserType = await userSchema.parseAsync(req.body);
 
+    const user = await db.user.findUnique({ where: { id: userId } });
     if (!user) {
-      res.status(404).json({ error: "User not found " });
+      res.status(404).json({ error: "User not found" });
       return;
     }
 
+    const updatedData: Partial<UpdateUserType> = { ...userData };
     if (userData.password) {
-      const hashedPassword = await bcrypt.hash(userData.password, 10);
-      const updatedUser = await db.user.update({
-        where: {
-          id: userId,
-        },
-        data: { password: hashedPassword, ...userData },
-      });
-
-      const { password: _, ...safeUserData } = updatedUser;
-
-      res.status(200).json({ user: safeUserData });
-      return;
+      updatedData.password = await bcrypt.hash(userData.password, 10);
     }
 
-    const updatedUser: User = await db.user.update({
-      where: {
-        id: userId,
-      },
-      data: { ...userData },
+    const updatedUser = await db.user.update({
+      where: { id: userId },
+      data: updatedData,
     });
 
     const { password: _, ...safeUserData } = updatedUser;
-
     res.status(200).json({ user: safeUserData });
     return;
   } catch (error: any) {
@@ -176,7 +159,8 @@ async function updateuserDetails(req: Request, res: Response) {
     res
       .status(500)
       .json({ error: "Internal server error", details: error.message });
+    return;
   }
 }
 
-export { deleteAccount, getUserDetails, updateuserDetails };
+export { deleteAccount, getUserDetails, updateUserDetails };

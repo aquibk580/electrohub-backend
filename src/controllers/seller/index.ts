@@ -1,3 +1,4 @@
+import bcrypt from "bcrypt";
 import { Request, Response } from "express";
 import { db } from "../../lib/db.js";
 import { z, ZodSchema } from "zod";
@@ -97,6 +98,7 @@ type UpdateSellerType = {
   address?: string | null;
   phone?: string | null;
   answer?: string | null;
+  password?: string | null;
 };
 
 const sellerSchema: ZodSchema = z.object({
@@ -104,6 +106,10 @@ const sellerSchema: ZodSchema = z.object({
   address: z.string().min(1, "Address is required").optional(),
   phone: z.string().min(10, "Phone must be at least 10 digits").optional(),
   answer: z.string().min(1, "Address is required").optional(),
+  password: z
+    .string()
+    .min(6, "Password must be at least 6 characters long")
+    .optional(),
 });
 
 const extractPublicId = (url: string): string => {
@@ -122,43 +128,44 @@ async function updateSellerDetails(req: Request, res: Response) {
   }
 
   try {
-    const sellerData: UpdateSellerType = await sellerSchema.parse(req.body);
-    const seller: Seller | null = await db.seller.findUnique({
-      where: {
-        id: sellerId,
-      },
-    });
+    const { password, ...sellerData }: UpdateSellerType =
+      await sellerSchema.parseAsync(req.body);
+
+    const seller = await db.seller.findUnique({ where: { id: sellerId } });
 
     if (!seller) {
-      res.status(404).json({ error: "seller not found " });
+      res.status(404).json({ error: "Seller not found" });
       return;
     }
 
-    const image = req.file;
-    if (image) {
+    let updatedData: Partial<UpdateSellerType & { imageUrl?: string }> = {
+      ...sellerData,
+    };
+
+    // Handle profile image update
+    if (req.file) {
       if (seller.pfp) {
         const imagePublicId = extractPublicId(seller.pfp);
-        await cloudinary.uploader.destroy(imagePublicId);
+        if (imagePublicId) await cloudinary.uploader.destroy(imagePublicId);
       }
 
-      const imageUrl = await uploadToCloudinary(
-        image.buffer,
+      updatedData.imageUrl = await uploadToCloudinary(
+        req.file.buffer,
         process.env.SELLER_PFP_FOLDER!
       );
-
-      Object.assign(sellerData, { pfp: imageUrl });
     }
 
-    const updatedseller: Seller = await db.seller.update({
-      where: {
-        id: sellerId,
-      },
-      data: { ...sellerData },
+    if (password) {
+      updatedData.password = await bcrypt.hash(password, 10);
+    }
+
+    const updatedSeller = await db.seller.update({
+      where: { id: sellerId },
+      data: updatedData,
     });
 
-    const { password: _, ...safesellerData } = updatedseller;
-
-    res.status(200).json({ seller: safesellerData });
+    const { password: _, ...safeSellerData } = updatedSeller;
+    res.status(200).json({ seller: safeSellerData });
     return;
   } catch (error: any) {
     console.error("ERROR_WHILE_UPDATING_SELLER", error);
@@ -171,6 +178,7 @@ async function updateSellerDetails(req: Request, res: Response) {
     res
       .status(500)
       .json({ error: "Internal server error", details: error.message });
+    return;
   }
 }
 

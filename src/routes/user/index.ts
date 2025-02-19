@@ -7,7 +7,7 @@ import orderRoutes from "./order.js";
 import {
   deleteAccount,
   getUserDetails,
-  updateuserDetails,
+  updateUserDetails,
 } from "../../controllers/user/index.js";
 import { isLoggedIn, isSameEntity } from "../../middlewares/auth.js";
 
@@ -26,7 +26,7 @@ router.use("/cart", isLoggedIn, cartRoutes);
 router.use("/wishlist", isLoggedIn, wishlistRoutes);
 
 // Order routes
-router.use("/order", isLoggedIn, orderRoutes);
+router.use("/orders", isLoggedIn, orderRoutes);
 
 // Get user details of a specific user
 router.get("/:id", isLoggedIn, isSameEntity, getUserDetails);
@@ -35,6 +35,6 @@ router.get("/:id", isLoggedIn, isSameEntity, getUserDetails);
 router.delete("/:id", isLoggedIn, isSameEntity, deleteAccount);
 
 // Update user details
-router.patch("/:id", isLoggedIn, isSameEntity, updateuserDetails);
+router.patch("/:id", isLoggedIn, isSameEntity, updateUserDetails);
 
 export default router;

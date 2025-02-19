@@ -88,6 +88,8 @@ model OrderItem {
   quantity      Int
   status        OrderStatus   @default(OrderConfirmed)
   paymentStatus PaymentStatus @default(Pending)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
 }
 
 model Cart {

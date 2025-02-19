@@ -71,7 +71,7 @@ async function verifyPayment(req: Request, res: Response) {
 
     if (generatedSignature === razorpay_signature) {
       const { orderData } = req.body;
-      console.log(orderData)
+      console.log(orderData);
       const { total, items }: OrderInput = orderData;
       const parsedTotal = parseInt(total, 10);
       const userId = parseInt((req.user as UserPayload).id);
@@ -91,6 +91,19 @@ async function verifyPayment(req: Request, res: Response) {
           orderItems: true,
         },
       });
+
+      const cart = await db.cart.findUnique({
+        where: {
+          userId,
+        },
+      });
+
+      await db.cartItem.deleteMany({
+        where: {
+          cartId: cart!.id,
+        },
+      });
+
       res.status(200).json({
         success: true,
         message: "Payment verified successfully",
@@ -112,4 +125,87 @@ async function verifyPayment(req: Request, res: Response) {
   }
 }
 
-export { placeOrder, verifyPayment };
+async function getAllOrders(req: Request, res: Response) {
+  try {
+    const userId = parseInt((req.user as UserPayload).id);
+
+    if (!userId) {
+      res.status(400).json({ error: "User Id is required" });
+      return;
+    }
+
+    const orders = await db.order.findMany({
+      where: { userId },
+      include: {
+        orderItems: {
+          include: {
+            product: {
+              include: {
+                seller: true,
+                images: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    const formattedOrders = orders.map((order) => ({
+      ...order,
+      orderItems: order.orderItems.map((item) => ({
+        ...item,
+        product: item.product,
+      })),
+    }));
+
+    res.status(200).json(formattedOrders);
+  } catch (error: any) {
+    console.log("ERROR_WHILE_GETTING_ALL_ORDERS", error);
+    res
+      .status(500)
+      .json({ error: "Internal Server Error", details: error.message });
+    return;
+  }
+}
+
+async function getSingleOrder(req: Request, res: Response) {
+  try {
+    const { id } = req.params;
+    const orderItemId = parseInt(id, 10);
+
+    if (isNaN(orderItemId)) {
+      res.status(400).json({ error: "Invalid or missing order item id" });
+      return;
+    }
+
+    const orderItem = await db.orderItem.findUnique({
+      where: {
+        id: orderItemId,
+      },
+      include: {
+        product: {
+          include: {
+            seller: true,
+            images: true,
+          },
+        },
+      },
+    });
+
+    if (!orderItem) {
+      res.status(404).json({ error: "Order item not found" });
+      return;
+    }
+
+    res.status(200).json(orderItem);
+    return;
+  } catch (error: any) {
+    console.log("ERROR_WHILE_GETTING_AN_ORDER", error);
+    res
+      .status(500)
+      .json({ error: "Internal Server Error", details: error.message });
+    return;
+  }
+}
+
+export { placeOrder, verifyPayment, getAllOrders, getSingleOrder };
