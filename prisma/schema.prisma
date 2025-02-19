@@ -190,7 +190,7 @@ model ReviewImage {
 model Review {
   id          Int           @id @default(autoincrement())
   content     String
-  rating      Int 
+  rating      Int
   ReviewImage ReviewImage[]
   userId      Int?
   user        User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
@@ -201,15 +201,18 @@ model Review {
 }
 
 model BannerCarousel {
-  id       Int    @id @default(autoincrement())
+  id       Int     @id @default(autoincrement())
+  title    String
   imageUrl String
   href     String
+  isActive Boolean @default(true)
 }
 
 model ProductCarousel {
-  id       Int    @id @default(autoincrement())
+  id       Int     @id @default(autoincrement())
   imageUrl String
   href     String
   name     String
   price    Float
+  isActive Boolean @default(true)
 }

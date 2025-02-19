@@ -2,7 +2,11 @@ import { db } from "../../lib/db.js";
 // Get all banner carousels
 export async function getAllBannerCarousels(req, res) {
     try {
-        const bannerCarousels = await db.bannerCarousel.findMany({});
+        const bannerCarousels = await db.bannerCarousel.findMany({
+            where: {
+                isActive: true,
+            },
+        });
         if (bannerCarousels.length === 0) {
             res.status(404).json({ error: "No Banner Carousel Available" });
             return;

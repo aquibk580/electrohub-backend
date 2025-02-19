@@ -2,7 +2,9 @@ import { z } from "zod";
 import { db } from "../../lib/db.js";
 import cloudinary, { uploadToCloudinary } from "../../lib/cloudinary.js";
 const bannerCarouselSchema = z.object({
-    href: z.string().min(3, "Href must be at least 3 character long"),
+    title: z.string().min(1, "Title must be at least 1 character long"),
+    href: z.string().min(1, "Href must be at least 1 character long"),
+    isActive: z.union([z.string(), z.boolean()]).optional().default("true"),
 });
 const extractPublicId = (url) => {
     const parts = url.split("/");
@@ -13,6 +15,7 @@ const extractPublicId = (url) => {
 async function createBannerCarousel(req, res) {
     try {
         const validatedData = await bannerCarouselSchema.parse(req.body);
+        const parsedIsActive = validatedData.isActive === "true" || validatedData.isActive === true;
         const image = req.file;
         if (!image) {
             res.status(400).json({ error: "Image is required" });
@@ -21,8 +24,10 @@ async function createBannerCarousel(req, res) {
         const imageUrl = await uploadToCloudinary(image.buffer, process.env.BANNER_CAROUSEL_FOLDER);
         const bannerCarousel = await db.bannerCarousel.create({
             data: {
+                title: validatedData.title,
                 href: validatedData.href,
                 imageUrl,
+                isActive: parsedIsActive,
             },
         });
         res
@@ -30,7 +35,7 @@ async function createBannerCarousel(req, res) {
             .json({ message: "Banner created successfully", bannerCarousel });
     }
     catch (error) {
-        console.log("ERROR_WHILE_CREATING_BANNER_CAROUSEL");
+        console.log("ERROR_WHILE_CREATING_BANNER_CAROUSEL", error);
         res
             .status(500)
             .json({ error: "Internal Server Error", details: error.message });
@@ -57,7 +62,12 @@ async function getAllBannerCarousels(req, res) {
     }
 }
 const updateBannerCarouselSchema = z.object({
-    href: z.string().min(3, "Href must be at least 3 character long").optional(),
+    title: z
+        .string()
+        .min(1, "Title is must be at least 1 character long")
+        .optional(),
+    href: z.string().min(1, "Href must be at least 1 character long").optional(),
+    isActive: z.union([z.string(), z.boolean()]).optional(),
 });
 // Update a specific banner carousel
 async function updateBannerCarousel(req, res) {
@@ -79,8 +89,19 @@ async function updateBannerCarousel(req, res) {
         }
         const validatedData = await updateBannerCarouselSchema.parse(req.body);
         let updatedData = {};
+        if (validatedData.title) {
+            updatedData.title = validatedData.title;
+        }
         if (validatedData.href) {
             updatedData.href = validatedData.href;
+        }
+        if (validatedData.isActive) {
+            if (typeof validatedData.isActive === "string") {
+                updatedData.isActive = validatedData.isActive === "true";
+            }
+            else {
+                updatedData.isActive = validatedData.isActive;
+            }
         }
         const image = req.file;
         if (image) {
@@ -88,7 +109,7 @@ async function updateBannerCarousel(req, res) {
             if (exisitingImage) {
                 const imagePublicId = extractPublicId(exisitingImage);
                 if (imagePublicId) {
-                    await cloudinary.uploader.destroy(`${process.env.BANNER_CAROUSEL_FOLDER}/${imagePublicId}`);
+                    await cloudinary.uploader.destroy(imagePublicId);
                 }
             }
             const imageUrl = await uploadToCloudinary(image.buffer, process.env.BANNER_CAROUSEL_FOLDER);
@@ -131,6 +152,12 @@ async function deleteBannerCarousel(req, res) {
         if (!bannerCarousel) {
             res.status(404).json({ error: "Banner Carousel not found" });
             return;
+        }
+        if (bannerCarousel.imageUrl) {
+            const imagePublicId = extractPublicId(bannerCarousel.imageUrl);
+            if (imagePublicId) {
+                await cloudinary.uploader.destroy(`${process.env.BANNER_CAROUSEL_FOLDER}/${imagePublicId}`);
+            }
         }
         await db.bannerCarousel.delete({
             where: {

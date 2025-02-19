@@ -2,7 +2,11 @@ import { db } from "../../lib/db.js";
 // Get all product carousels
 export async function getAllProductCarousels(req, res) {
     try {
-        const productCarousel = await db.productCarousel.findMany({});
+        const productCarousel = await db.productCarousel.findMany({
+            where: {
+                isActive: true,
+            },
+        });
         if (productCarousel.length === 0) {
             res.status(404).json({ error: "No Product Carousel Item Available" });
             return;

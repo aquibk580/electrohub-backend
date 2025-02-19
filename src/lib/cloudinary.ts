@@ -6,6 +6,8 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
+
+
 export async function uploadToCloudinary(
   file: Buffer,
   folder: string

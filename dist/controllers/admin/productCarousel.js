@@ -1,32 +1,38 @@
 import { z } from "zod";
 import cloudinary, { uploadToCloudinary } from "../../lib/cloudinary.js";
 import { db } from "../../lib/db.js";
+import sharp from "sharp";
 const productCarouselSchema = z.object({
-    href: z.string().min(3, "Href must be at least 3 character long"),
-    name: z.string().min(3, "Name must be at least 3 character long"),
-    price: z.string().min(1, "Name must be at least 3 character long"),
+    href: z.string().min(1, "Href must be at least 1 character long"),
+    name: z.string().min(1, "Name must be at least 1 character long"),
+    price: z.string().min(1, "Price must be at least 1 character long"),
+    isActive: z.union([z.string(), z.boolean()]).default(true),
 });
+async function optimizeImage(imageBuffer) {
+    return sharp(imageBuffer).resize({ width: 500 }).toFormat("png").toBuffer();
+}
 const extractPublicId = (url) => {
-    const parts = url.split("/");
-    const publicIdwithExtension = parts[parts.length - 1];
-    return publicIdwithExtension.split(".")[0];
+    return url.split("/").pop()?.split(".")[0] || "";
 };
 // Create product carousel
 async function createProductCarousel(req, res) {
     try {
         const validatedData = await productCarouselSchema.parse(req.body);
-        const { price, ...restData } = validatedData;
+        const { price, isActive, ...restData } = validatedData;
         const parsedPrice = parseInt(price, 10);
+        const parsedIsActive = validatedData.isActive === "true" || validatedData.isActive;
         const image = req.file;
         if (!image) {
             res.status(400).json({ error: "Image is required" });
             return;
         }
-        const imageUrl = await uploadToCloudinary(image.buffer, process.env.PRODUCT_CAROUSEL_FOLDER);
+        const optimizedImage = await optimizeImage(image.buffer);
+        const imageUrl = await uploadToCloudinary(optimizedImage, process.env.PRODUCT_CAROUSEL_FOLDER);
         const productCarousel = await db.productCarousel.create({
             data: {
                 imageUrl,
                 price: parsedPrice,
+                isActive: parsedIsActive,
                 ...restData,
             },
         });
@@ -36,7 +42,7 @@ async function createProductCarousel(req, res) {
         });
     }
     catch (error) {
-        console.log("ERROR_WHILE_CREATING_PRODUCT_CAROUSEL");
+        console.error("ERROR_WHILE_CREATING_PRODUCT_CAROUSEL", error);
         res
             .status(500)
             .json({ error: "Internal Server Error", details: error.message });
@@ -66,6 +72,7 @@ const updateProductCarouselSchema = z.object({
     href: z.string().min(3, "Href must be at least 3 character long").optional(),
     name: z.string().min(3, "Name must be at least 3 character long").optional(),
     price: z.string().min(1, "Name must be at least 3 character long").optional(),
+    isActive: z.string().optional(),
 });
 // Update a specific product carousel
 async function updateProductCarousel(req, res) {
@@ -96,6 +103,12 @@ async function updateProductCarousel(req, res) {
         if (validatedData.price) {
             updatedData.price = parseFloat(validatedData.price);
         }
+        if (validatedData.isActive !== undefined) {
+            updatedData.isActive =
+                typeof validatedData.isActive === "string"
+                    ? validatedData.isActive === "true"
+                    : validatedData.isActive;
+        }
         const image = req.file;
         if (image) {
             const existingImage = productCarousel.imageUrl;
@@ -105,7 +118,7 @@ async function updateProductCarousel(req, res) {
                     await cloudinary.uploader.destroy(`${process.env.PRODUCT_CAROUSEL_FOLDER}/${imagePublicId}`);
                 }
             }
-            const imageUrl = await uploadToCloudinary(image.buffer, process.env.BANNER_CAROUSEL_FOLDER);
+            const imageUrl = await uploadToCloudinary(image.buffer, process.env.PRODUCT_CAROUSEL_FOLDER);
             updatedData.imageUrl = imageUrl;
         }
         const updatedProductCarousel = await db.productCarousel.update({
@@ -121,7 +134,7 @@ async function updateProductCarousel(req, res) {
         return;
     }
     catch (error) {
-        console.log("ERROR_WHILE_UPDATING_PRODUCT_CAROUSEL");
+        console.log("ERROR_WHILE_UPDATING_PRODUCT_CAROUSEL", error);
         res
             .status(500)
             .json({ error: "Internal Server Error", details: error.message });
@@ -145,6 +158,12 @@ async function deleteProductCarousel(req, res) {
         if (!productCarousel) {
             res.status(404).json({ error: "Product Carousel not found" });
             return;
+        }
+        if (productCarousel.imageUrl) {
+            const imagePublicId = extractPublicId(productCarousel.imageUrl);
+            if (imagePublicId) {
+                await cloudinary.uploader.destroy(imagePublicId);
+            }
         }
         await db.productCarousel.delete({
             where: {

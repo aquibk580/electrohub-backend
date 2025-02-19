@@ -31,6 +31,9 @@ const extractPublicId = (url: string): string => {
 async function getAllProducts(req: Request, res: Response) {
   try {
     const products: Array<ProductDB> = await db.product.findMany({
+      orderBy: {
+        createdAt: "desc",
+      },
       include: {
         images: true,
         productInfo: true,
