@@ -17,7 +17,10 @@ async function adminSignup(req, res) {
     try {
         const { email, password, secretKey, name } = await adminSignupSchema.parse(req.body);
         if (secretKey !== process.env.ADMIN_SECRET_KEY) {
-            res.status(401).json({ error: "Invalid admin secret key" });
+            res.status(401).json({
+                error: "Invalid admin secret key",
+                flag: "InvadlidCredentials",
+            });
             return;
         }
         const existingAdmin = await db.admin.findUnique({
@@ -26,7 +29,9 @@ async function adminSignup(req, res) {
             },
         });
         if (existingAdmin) {
-            res.status(400).json({ error: "Admin already exists " });
+            res
+                .status(400)
+                .json({ error: "Admin already exists ", flag: "AdminExists" });
             return;
         }
         const hashedPassword = await bcrypt.hash(password, 10);
@@ -56,10 +61,6 @@ async function adminSignup(req, res) {
             res.status(400).json({ error: error.errors });
             return;
         }
-        if (error.code === "P2002") {
-            res.status(400).json({ error: "Admin already exists" });
-            return;
-        }
         res.status(500).json({ error: "Internal server error" });
     }
 }
@@ -77,12 +78,14 @@ async function adminSignin(req, res) {
             },
         });
         if (!admin) {
-            res.status(401).json({ error: "Invalid Credentials" });
+            res.status(401).json({ error: "Admin not found", flag: "AdminNotFound" });
             return;
         }
         const isPasswordCorrect = await bcrypt.compare(password, admin.password);
         if (!isPasswordCorrect) {
-            res.status(401).json({ error: "Invalid Credentials" });
+            res
+                .status(401)
+                .json({ error: "Invalid Credentials", flag: "InvadlidCredentials" });
             return;
         }
         const adminToken = jwt.sign({ id: admin.id, email: admin.email, name: admin.name }, process.env.JWT_SECRET);
@@ -124,11 +127,16 @@ async function forgotPassword(req, res) {
             },
         });
         if (!admin) {
-            res.status(404).json({ error: "Admin not found" });
+            res.status(404).json({ error: "Admin not found", flag: "AdminNotFound" });
             return;
         }
         if (adminData.secretKey !== process.env.ADMIN_SECRET_KEY) {
-            res.status(400).json({ error: "Incorrect Admin Secret key" });
+            res
+                .status(400)
+                .json({
+                error: "Incorrect Admin Secret key",
+                flag: "InvadlidCredentials",
+            });
             return;
         }
         const hashedPassword = await bcrypt.hash(adminData.password, 10);

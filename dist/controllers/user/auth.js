@@ -20,7 +20,7 @@ async function signup(req, res) {
             },
         });
         if (existingUser) {
-            res.status(400).json({ error: "Email already exists" });
+            res.status(400).json({ error: "Email already exists", flag: "UserExists" });
             return;
         }
         const hashedPassword = await bcrypt.hash(userData.password, 10);
@@ -70,16 +70,16 @@ async function signin(req, res) {
             where: { email: userData.email },
         });
         if (!user) {
-            res.status(404).json({ error: "User not found." });
+            res.status(404).json({ error: "User not found.", flag: "UserNotFound" });
             return;
         }
         if (!user.password) {
-            res.status(400).json({ error: "Password is not present in the db" });
+            res.status(400).json({ error: "Password is not present in the db", flag: "PasswordNotFound" });
             return;
         }
         const isPasswordCorrect = await bcrypt.compare(userData.password, user.password);
         if (!isPasswordCorrect) {
-            res.status(401).json({ error: "Invalid email or password." });
+            res.status(401).json({ error: "Invalid email or password", flag: "InvalidCredentials" });
             return;
         }
         const token = jwt.sign({ id: user.id, email: user.email, userType: "user" }, process.env.JWT_SECRET, { expiresIn: "7d" });
@@ -116,13 +116,13 @@ async function forgotPassword(req, res) {
             },
         });
         if (!user) {
-            res.status(404).json({ error: "User not found" });
+            res.status(404).json({ error: "User not found", flag: "UserNotFound" });
             return;
         }
         if (userData.answer !== user.answer) {
             res
                 .status(400)
-                .json({ error: "Incorrect answer to the security quetion" });
+                .json({ error: "Incorrect answer to the security quetion", flag: "InvalidCredentials" });
             return;
         }
         const hashedPassword = await bcrypt.hash(userData.password, 10);

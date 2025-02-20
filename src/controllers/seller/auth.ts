@@ -35,7 +35,9 @@ async function signup(req: Request, res: Response) {
     const image = req.file;
 
     if (!image) {
-      res.status(400).json({ error: "Profile picture is required" });
+      res
+        .status(400)
+        .json({ error: "Profile picture is required", flag: "PFPIsRequired" });
       return;
     }
     try {
@@ -52,7 +54,9 @@ async function signup(req: Request, res: Response) {
     });
 
     if (existingSeller) {
-      res.status(400).json({ error: "Email already exists" });
+      res
+        .status(400)
+        .json({ error: "Email already exists", flag: "SellerExists" });
       return;
     }
 
@@ -98,11 +102,6 @@ async function signup(req: Request, res: Response) {
       return;
     }
 
-    if (error.code === "P2002") {
-      res.status(400).json({ error: "Email already exists" });
-      return;
-    }
-
     res.status(500).json({ error: "Internal server error" });
   }
 }
@@ -127,7 +126,9 @@ async function signin(req: Request, res: Response): Promise<void> {
     });
 
     if (!seller || !seller.password) {
-      res.status(404).json({ error: "Seller not found." });
+      res
+        .status(404)
+        .json({ error: "Seller not found.", flag: "SellerNotFound" });
       return;
     }
 
@@ -136,7 +137,12 @@ async function signin(req: Request, res: Response): Promise<void> {
       seller.password
     );
     if (!isPasswordCorrect) {
-      res.status(401).json({ error: "Invalid email or password." });
+      res
+        .status(401)
+        .json({
+          error: "Invalid email or password.",
+          flag: "InvalidCredentials",
+        });
       return;
     }
 
@@ -192,14 +198,16 @@ async function forgotPassword(req: Request, res: Response) {
     });
 
     if (!seller) {
-      res.status(404).json({ error: "Seller not found" });
+      res
+        .status(404)
+        .json({ error: "Seller not found", flag: "SellerNotFound" });
       return;
     }
 
     if (sellerData.answer !== seller.answer) {
       res
         .status(400)
-        .json({ error: "Incorrect answer to the security quetion" });
+        .json({ error: "Incorrect answer to the security quetion", flag:"InvalidCredentials" });
       return;
     }
 

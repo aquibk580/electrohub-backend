@@ -8,14 +8,6 @@ const fileFilter = (
   file: Express.Multer.File,
   cb: FileFilterCallback
 ): void => {
-  const files = req.files as Express.Multer.File[] | undefined;
-
-  const filesCount = files ? files.length : 0;
-
-  if (filesCount > 5) {
-    return cb(new Error("You can upload up to 5 files only."));
-  }
-
   if (file.mimetype.startsWith("image/")) {
     cb(null, true);
   } else {

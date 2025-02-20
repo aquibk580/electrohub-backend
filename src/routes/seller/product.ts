@@ -10,6 +10,7 @@ import {
   updateProduct,
 } from "../../controllers/seller/product.js";
 import { upload } from "../../lib/multer.js";
+import { checkFileCount } from "../../lib/validateFile.js";
 
 const router: Router = Router();
 
@@ -19,6 +20,7 @@ router.post(
   isLoggedIn,
   isSeller,
   upload.array("images", 5),
+  checkFileCount,
   createProduct
 );
 
@@ -50,6 +52,7 @@ router.patch(
   isLoggedIn,
   isSeller,
   upload.array("images", 5),
+  checkFileCount,
   updateProduct
 );
 

@@ -18,7 +18,9 @@ async function signup(req, res) {
         const { password, ...sellerData } = await sellerSchema.parse(req.body);
         const image = req.file;
         if (!image) {
-            res.status(400).json({ error: "Profile picture is required" });
+            res
+                .status(400)
+                .json({ error: "Profile picture is required", flag: "PFPIsRequired" });
             return;
         }
         try {
@@ -34,7 +36,9 @@ async function signup(req, res) {
             },
         });
         if (existingSeller) {
-            res.status(400).json({ error: "Email already exists" });
+            res
+                .status(400)
+                .json({ error: "Email already exists", flag: "SellerExists" });
             return;
         }
         const hashedPassword = await bcrypt.hash(password, 10);
@@ -65,10 +69,6 @@ async function signup(req, res) {
             res.status(400).json({ error: error.errors });
             return;
         }
-        if (error.code === "P2002") {
-            res.status(400).json({ error: "Email already exists" });
-            return;
-        }
         res.status(500).json({ error: "Internal server error" });
     }
 }
@@ -84,12 +84,19 @@ async function signin(req, res) {
             where: { email: sellerData.email },
         });
         if (!seller || !seller.password) {
-            res.status(404).json({ error: "Seller not found." });
+            res
+                .status(404)
+                .json({ error: "Seller not found.", flag: "SellerNotFound" });
             return;
         }
         const isPasswordCorrect = await bcrypt.compare(sellerData.password, seller.password);
         if (!isPasswordCorrect) {
-            res.status(401).json({ error: "Invalid email or password." });
+            res
+                .status(401)
+                .json({
+                error: "Invalid email or password.",
+                flag: "InvalidCredentials",
+            });
             return;
         }
         const token = jwt.sign({ id: seller.id, email: seller.email, userType: "seller" }, process.env.JWT_SECRET, { expiresIn: "7d" });
@@ -125,13 +132,15 @@ async function forgotPassword(req, res) {
             },
         });
         if (!seller) {
-            res.status(404).json({ error: "Seller not found" });
+            res
+                .status(404)
+                .json({ error: "Seller not found", flag: "SellerNotFound" });
             return;
         }
         if (sellerData.answer !== seller.answer) {
             res
                 .status(400)
-                .json({ error: "Incorrect answer to the security quetion" });
+                .json({ error: "Incorrect answer to the security quetion", flag: "InvalidCredentials" });
             return;
         }
         const hashedPassword = await bcrypt.hash(sellerData.password, 10);

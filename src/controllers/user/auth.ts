@@ -34,7 +34,7 @@ async function signup(req: Request, res: Response): Promise<void> {
     });
 
     if (existingUser) {
-      res.status(400).json({ error: "Email already exists" });
+      res.status(400).json({ error: "Email already exists", flag:"UserExists" });
       return;
     }
 
@@ -102,12 +102,12 @@ async function signin(req: Request, res: Response): Promise<void> {
     });
 
     if (!user) {
-      res.status(404).json({ error: "User not found." });
+      res.status(404).json({ error: "User not found.", flag:"UserNotFound" });
       return;
     }
 
     if (!user.password) {
-      res.status(400).json({ error: "Password is not present in the db" });
+      res.status(400).json({ error: "Password is not present in the db", flag:"PasswordNotFound" });
       return;
     }
 
@@ -116,7 +116,7 @@ async function signin(req: Request, res: Response): Promise<void> {
       user.password
     );
     if (!isPasswordCorrect) {
-      res.status(401).json({ error: "Invalid email or password." });
+      res.status(401).json({ error: "Invalid email or password", flag:"InvalidCredentials" });
       return;
     }
 
@@ -170,14 +170,14 @@ async function forgotPassword(req: Request, res: Response) {
     });
 
     if (!user) {
-      res.status(404).json({ error: "User not found" });
+      res.status(404).json({ error: "User not found", flag:"UserNotFound" });
       return;
     }
 
     if (userData.answer !== user.answer) {
       res
         .status(400)
-        .json({ error: "Incorrect answer to the security quetion" });
+        .json({ error: "Incorrect answer to the security quetion", flag:"InvalidCredentials" });
       return;
     }
 

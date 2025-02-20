@@ -4,6 +4,7 @@ import {
   getAllOrders,
   getSingleOrder,
   placeOrder,
+  updateOrderStatus,
   verifyPayment,
 } from "../../controllers/user/order.js";
 
@@ -20,5 +21,8 @@ router.get("/", isLoggedIn, getAllOrders);
 
 // Get specific order of a user
 router.get("/:id", isLoggedIn, getSingleOrder);
+
+// Update a specific order status
+router.patch("/:id", isLoggedIn, updateOrderStatus);
 
 export default router;

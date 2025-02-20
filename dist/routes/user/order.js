@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { isLoggedIn } from "../../middlewares/auth.js";
-import { getAllOrders, getSingleOrder, placeOrder, verifyPayment, } from "../../controllers/user/order.js";
+import { getAllOrders, getSingleOrder, placeOrder, updateOrderStatus, verifyPayment, } from "../../controllers/user/order.js";
 const router = Router();
 // Place an order
 router.post("/place-order", isLoggedIn, placeOrder);
@@ -10,4 +10,6 @@ router.post("/verify-payment", isLoggedIn, verifyPayment);
 router.get("/", isLoggedIn, getAllOrders);
 // Get specific order of a user
 router.get("/:id", isLoggedIn, getSingleOrder);
+// Update a specific order status
+router.patch("/:id", isLoggedIn, updateOrderStatus);
 export default router;
