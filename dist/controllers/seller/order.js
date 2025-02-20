@@ -1,32 +1,30 @@
 import { db } from "../../lib/db.js";
 async function getAllOrders(req, res) {
     try {
-        const sellerId = parseInt(req.user.id, 10);
-        // if (isNaN(sellerId)) {
-        //   res.status(400).json({ error: "Invalid or missing seller id" });
-        //   return;
-        // }
-        console.log(sellerId);
-        const products = await db.product.findMany({
-            where: {
-                sellerId,
-            },
-            include: {
-                orderItems: true,
-            },
-        });
-        const orderIds = products.flatMap((p) => p.orderItems.map((orderItem) => orderItem.orderId));
-        if (orderIds.length === 0) {
-            return res.status(200).json({ orders: [] });
+        const sellerId = Number.parseInt(req.user.id, 10);
+        if (isNaN(sellerId)) {
+            res.status(400).json({ error: "Invalid or missing seller id" });
+            return;
         }
+        console.log(sellerId);
         const orders = await db.order.findMany({
             where: {
-                id: {
-                    in: orderIds,
+                orderItems: {
+                    some: {
+                        product: {
+                            sellerId: sellerId,
+                        },
+                    },
                 },
             },
             include: {
+                user: true,
                 orderItems: {
+                    where: {
+                        product: {
+                            sellerId: sellerId,
+                        },
+                    },
                     include: {
                         product: {
                             include: {
@@ -39,13 +37,14 @@ async function getAllOrders(req, res) {
                 },
             },
         });
-        res.status(200).json(orders);
+        const filteredOrders = orders.filter((order) => order.orderItems.length > 0);
+        res.status(200).json(filteredOrders);
         return;
     }
     catch (error) {
         res
             .status(500)
-            .json({ error: "Internal Server Error", details: error.messgae });
+            .json({ error: "Internal Server Error", details: error.message });
         return;
     }
 }

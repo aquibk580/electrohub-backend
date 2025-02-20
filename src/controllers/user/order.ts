@@ -137,6 +137,9 @@ async function getAllOrders(req: Request, res: Response) {
 
     const orders = await db.order.findMany({
       where: { userId },
+      orderBy: {
+        createdAt: "desc",
+      },
       include: {
         orderItems: {
           include: {
@@ -248,8 +251,8 @@ async function updateOrderStatus(req: Request, res: Response) {
         status: status as OrderStatus,
       },
     });
-    res.status(200).json({})
-    return ;
+    res.status(200).json({});
+    return;
   } catch (error: any) {
     console.log("ERROR_WHILE_UPDATING_ORDER_STATUS", error);
     res

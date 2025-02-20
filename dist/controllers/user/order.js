@@ -115,6 +115,9 @@ async function getAllOrders(req, res) {
         }
         const orders = await db.order.findMany({
             where: { userId },
+            orderBy: {
+                createdAt: "desc",
+            },
             include: {
                 orderItems: {
                     include: {
