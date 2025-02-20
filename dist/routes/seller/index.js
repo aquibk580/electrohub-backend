@@ -2,10 +2,14 @@ import { Router } from "express";
 import authRoutes from "./auth.js";
 import { deleteAccount, getSellerDetails, updateSellerDetails, } from "../../controllers/seller/index.js";
 import productRoutes from "./product.js";
+import orderRoutes from "./order.js";
 import { isLoggedIn, isSameEntity } from "../../middlewares/auth.js";
 import { upload } from "../../lib/multer.js";
 const router = Router();
+// Auth routes
 router.use("/auth", authRoutes);
+// Order Routes
+router.use("/orders", orderRoutes);
 // Seller delete account route
 router.delete("/:id", deleteAccount);
 // Product Routes

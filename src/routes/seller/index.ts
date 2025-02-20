@@ -6,12 +6,17 @@ import {
   updateSellerDetails,
 } from "../../controllers/seller/index.js";
 import productRoutes from "./product.js";
+import orderRoutes from "./order.js";
 import { isLoggedIn, isSameEntity } from "../../middlewares/auth.js";
 import { upload } from "../../lib/multer.js";
 
 const router: Router = Router();
 
+// Auth routes
 router.use("/auth", authRoutes);
+
+// Order Routes
+router.use("/orders", orderRoutes);
 
 // Seller delete account route
 router.delete("/:id", deleteAccount);
