@@ -138,7 +138,7 @@ async function updateSellerDetails(req: Request, res: Response) {
       return;
     }
 
-    let updatedData: Partial<UpdateSellerType & { imageUrl?: string }> = {
+    let updatedData: Partial<UpdateSellerType & { pfp?: string }> = {
       ...sellerData,
     };
 
@@ -149,7 +149,7 @@ async function updateSellerDetails(req: Request, res: Response) {
         if (imagePublicId) await cloudinary.uploader.destroy(imagePublicId);
       }
 
-      updatedData.imageUrl = await uploadToCloudinary(
+      updatedData.pfp = await uploadToCloudinary(
         req.file.buffer,
         process.env.SELLER_PFP_FOLDER!
       );

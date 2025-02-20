@@ -110,7 +110,7 @@ async function updateSellerDetails(req, res) {
                 if (imagePublicId)
                     await cloudinary.uploader.destroy(imagePublicId);
             }
-            updatedData.imageUrl = await uploadToCloudinary(req.file.buffer, process.env.SELLER_PFP_FOLDER);
+            updatedData.pfp = await uploadToCloudinary(req.file.buffer, process.env.SELLER_PFP_FOLDER);
         }
         if (password) {
             updatedData.password = await bcrypt.hash(password, 10);
