@@ -8,7 +8,7 @@ router.get("/", getAllProducts);
 // Get single Product
 router.get("/:productId", getSingleProduct);
 // review a product
-router.post("/:productId/review", isLoggedIn, upload.array("images", 3), sendReview);
+router.post("/:productId/review", isLoggedIn, sendReview);
 // Delete a review
 router.delete("/review/:reviewId", isLoggedIn, deleteReview);
 // Update a review

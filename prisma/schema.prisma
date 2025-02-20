@@ -182,24 +182,16 @@ model ProductImage {
   product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 }
 
-model ReviewImage {
-  id       Int    @id @default(autoincrement())
-  url      String
-  reviewId Int
-  review   Review @relation(fields: [reviewId], references: [id], onDelete: Cascade)
-}
-
 model Review {
-  id          Int           @id @default(autoincrement())
-  content     String
-  rating      Int
-  ReviewImage ReviewImage[]
-  userId      Int?
-  user        User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
-  productId   Int
-  product     Product       @relation(fields: [productId], references: [id], onDelete: Cascade)
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  id        Int      @id @default(autoincrement())
+  content   String
+  rating    Int
+  userId    Int?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  productId Int
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model BannerCarousel {

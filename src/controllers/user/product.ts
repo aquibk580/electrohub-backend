@@ -98,22 +98,19 @@ async function getSingleProduct(req: Request, res: Response) {
   }
 }
 
-const reviewSchema: ZodSchema = z.object({
-  content: z.string().min(1, "Review content is required"),
-  rating: z
+const reviewSchema = z.object({
+  content: z
     .string()
-    .min(1, "rating must be at least 1")
-    .max(5, "Rating cannot exceed five"),
+    .trim()
+    .min(5, "Review content must be at least 5 characters")
+    .max(1000, "Review content cannot exceed 1000 characters"),
+
+  rating: z.number(),
 });
 
 interface Review {
   content: string;
-  rating: string;
-}
-
-interface ReviewImage {
-  url: string;
-  reviewId: number;
+  rating: number;
 }
 
 // review a product
@@ -133,43 +130,19 @@ async function sendReview(req: Request, res: Response) {
     const reviewData: Review = await reviewSchema.parse(req.body);
 
     const { rating, content } = reviewData;
-    const parsedRating = parseInt(rating, 10);
 
     const review = await db.review.create({
       data: {
         content,
-        rating: parsedRating,
+        rating: rating,
         productId: parsedProductId,
         userId: parsedUserId,
       },
     });
 
-    const imageDatas: Array<ReviewImage> = [];
-
-    if (req.files) {
-      const images = req.files as Express.Multer.File[];
-      for (const image of images) {
-        validateFile(image);
-
-        const imageUrl = await uploadToCloudinary(
-          image.buffer,
-          process.env.REVIEW_FOLDER!
-        );
-
-        imageDatas.push({
-          url: imageUrl,
-          reviewId: review.id,
-        });
-      }
-
-      await db.reviewImage.createMany({
-        data: imageDatas,
-      });
-    }
     res.status(201).json({
       message: "Review added successfully",
       review,
-      images: imageDatas,
     });
   } catch (error: any) {
     console.error("ERROR_WHILE_SENDING_REVIEW", error);
