@@ -256,29 +256,6 @@ async function deleteProduct(req: Request, res: Response) {
       },
     });
 
-    const reviews = await db.review.findMany({
-      where: { productId: ProductId },
-      include: { ReviewImage: true },
-    });
-
-    const imageDeletions = [];
-    const dbImageDeletions = [];
-
-    for (const review of reviews) {
-      if (review.ReviewImage.length > 0) {
-        for (const reviewImage of review.ReviewImage) {
-          const imagePublicId = extractPublicId(reviewImage.url);
-          imageDeletions.push(cloudinary.uploader.destroy(imagePublicId));
-          dbImageDeletions.push(
-            db.reviewImage.delete({ where: { id: reviewImage.id } })
-          );
-        }
-      }
-    }
-
-    await Promise.all(imageDeletions);
-    await Promise.all(dbImageDeletions);
-
     await db.review.deleteMany({
       where: { productId: ProductId },
     });

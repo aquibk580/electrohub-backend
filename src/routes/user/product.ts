@@ -1,13 +1,13 @@
 import { Router } from "express";
 import {
   deleteReview,
-  deleteReviewImage,
   getAllProducts,
   getSingleProduct,
+  getUserReviews,
   sendReview,
+  updateReview,
 } from "../../controllers/user/product.js";
 import { isLoggedIn } from "../../middlewares/auth.js";
-import { upload } from "../../lib/multer.js";
 
 const router: Router = Router();
 
@@ -20,12 +20,13 @@ router.get("/:productId", getSingleProduct);
 // review a product
 router.post("/:productId/review", isLoggedIn, sendReview);
 
+// Get reviews of a specific user
+router.get("/review/reviews", isLoggedIn, getUserReviews);
+
 // Delete a review
 router.delete("/review/:reviewId", isLoggedIn, deleteReview);
 
 // Update a review
-router.patch("/review/:reviewId", isLoggedIn, upload.array("images", 3));
+router.patch("/review/:reviewId", isLoggedIn, updateReview);
 
-// Delete a specific reviewImage
-router.delete("/review/image/:imageId", isLoggedIn, deleteReviewImage);
 export default router;

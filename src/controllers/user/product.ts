@@ -21,36 +21,30 @@ interface Image {
   productId: number;
 }
 
-const extractPublicId = (url: string): string => {
-  const parts = url.split("/");
-  const publicIdwithExtension = parts[parts.length - 1];
-  return publicIdwithExtension.split(".")[0];
-};
-
 // Get all products
 async function getAllProducts(req: Request, res: Response) {
   try {
-    const products: Array<ProductDB> = await db.product.findMany({
-      orderBy: {
-        createdAt: "desc",
-      },
-      include: {
-        images: true,
-        productInfo: true,
-        reviews: true,
-      },
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 20;
+    const category = req.query.category as string | undefined;
+    const skip = (page - 1) * limit;
+
+    const whereClause =
+      category && category !== "All" ? { categoryName: category } : {};
+
+    const products = await db.product.findMany({
+      where: whereClause,
+      orderBy: { createdAt: "desc" },
+      include: { images: true, productInfo: true, reviews: true },
+      skip,
+      take: limit,
     });
 
-    if (products.length === 0) {
-      res.status(404).json({ error: "No products available" });
-      return;
-    }
+    const totalProducts = await db.product.count({ where: whereClause });
 
-    res.status(200).json({ products });
-    return;
+    res.status(200).json({ products, total: totalProducts });
   } catch (error: any) {
     console.error("ERROR_WHILE_GETTING_PRODUCT", error);
-
     res
       .status(500)
       .json({ error: "Internal server error", details: error.message });
@@ -158,6 +152,45 @@ async function sendReview(req: Request, res: Response) {
   }
 }
 
+// Get all reviews of a specific user
+async function getUserReviews(req: Request, res: Response) {
+  try {
+    const userId = parseInt((req.user as UserPayload).id);
+
+    if (!userId) {
+      res.status(400).json({ error: "User Id is required" });
+      return;
+    }
+
+    const reviews = await db.review.findMany({
+      where: {
+        userId,
+      },
+      include: {
+        product: {
+          include: {
+            images: true,
+          },
+        },
+      },
+    });
+
+    if (reviews.length === 0) {
+      res.status(200).json({ message: "No reviews found" });
+      return;
+    }
+
+    res.status(200).json(reviews);
+    return;
+  } catch (error: any) {
+    console.log(error);
+    res
+      .status(500)
+      .json({ error: "Internal Server Error", details: error.message });
+    return;
+  }
+}
+
 // Delete a specific review
 async function deleteReview(req: Request, res: Response) {
   try {
@@ -178,25 +211,6 @@ async function deleteReview(req: Request, res: Response) {
     if (!review) {
       res.status(404).json({ error: "Review not found" });
       return;
-    }
-
-    const reviewImages = await db.reviewImage.findMany({
-      where: {
-        reviewId: parsedReviewId,
-      },
-    });
-
-    if (reviewImages.length > 0) {
-      for (const image of reviewImages) {
-        const imagePublicId = extractPublicId(image.url);
-        await cloudinary.uploader.destroy(imagePublicId);
-      }
-
-      await db.reviewImage.deleteMany({
-        where: {
-          reviewId: parsedReviewId,
-        },
-      });
     }
 
     await db.review.delete({
@@ -227,14 +241,14 @@ const reveiewUpdateSchema: ZodSchema = z.object({
     .min(1, "Content must be at least 1 charcater long ")
     .optional(),
   rating: z
-    .string()
+    .number()
     .min(1, "Rating must be at least 1")
     .max(5, "Rating cannot exceed 5")
     .optional(),
 });
 
 // Update a specific review
-async function updateReveiw(req: Request, res: Response) {
+async function updateReview(req: Request, res: Response) {
   try {
     const { reviewId } = req.params;
     const ReviewId = parseInt(reviewId, 10);
@@ -246,7 +260,6 @@ async function updateReveiw(req: Request, res: Response) {
 
     const review = await db.review.findUnique({
       where: { id: ReviewId },
-      include: { ReviewImage: true },
     });
 
     if (!review) {
@@ -262,37 +275,21 @@ async function updateReveiw(req: Request, res: Response) {
       Object.entries(validatedData).filter(([_, value]) => value !== undefined)
     );
 
-    const uploadedFiles = req.files as Express.Multer.File[];
-    const newImageUrls = await Promise.all(
-      uploadedFiles.map(async (file) => {
-        validateFile(file);
-        return await uploadToCloudinary(
-          file.buffer,
-          process.env.REVIEW_FOLDER!
-        );
-      })
-    );
-
-    await Promise.all(
-      newImageUrls.map(async (url) => {
-        await db.reviewImage.create({
-          data: {
-            url,
-            reviewId: ReviewId,
-          },
-        });
-      })
-    );
-
     const updatedReview = await db.review.update({
       where: { id: ReviewId },
       data: updatedReviewData,
-      include: { ReviewImage: true },
+      include: {
+        product: {
+          include: {
+            images: true,
+          },
+        },
+      },
     });
 
     res.status(200).json({
       message: "Review updated successfully.",
-      product: updatedReview,
+      review: updatedReview,
     });
   } catch (error: any) {
     console.error("ERROR_WHILE_UPDATING_REVIEW", error);
@@ -303,41 +300,11 @@ async function updateReveiw(req: Request, res: Response) {
   }
 }
 
-// Delete a single review image
-async function deleteReviewImage(req: Request, res: Response) {
-  try {
-    const { imageId } = req.params;
-    const image = await db.reviewImage.findUnique({
-      where: { id: parseInt(imageId, 10) },
-    });
-
-    if (!image) {
-      res.status(404).json({ error: "Image not found." });
-      return;
-    }
-
-    const imagePublicId = extractPublicId(image.url);
-    await cloudinary.uploader.destroy(
-      `${process.env.PRODUCT_FOLDER}/${imagePublicId}`
-    );
-
-    await db.reviewImage.delete({ where: { id: image.id } });
-
-    res.status(200).json({ message: "Review image deleted successfully." });
-  } catch (error: any) {
-    console.log(error);
-    res
-      .status(500)
-      .json({ error: "Internal Server Error", details: error.message });
-    return;
-  }
-}
-
 export {
   getAllProducts,
   sendReview,
   deleteReview,
-  updateReveiw,
-  deleteReviewImage,
+  updateReview,
   getSingleProduct,
+  getUserReviews,
 };
