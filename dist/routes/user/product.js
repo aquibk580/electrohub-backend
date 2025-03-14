@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { deleteReview, getAllProducts, getSingleProduct, getUserReviews, sendReview, updateReview, } from "../../controllers/user/product.js";
+import { deleteReview, getAllProducts, getRelatedProducts, getSingleProduct, getUserReviews, sendReview, updateReview, } from "../../controllers/user/product.js";
 import { isLoggedIn } from "../../middlewares/auth.js";
 const router = Router();
 // Get all products
@@ -14,4 +14,6 @@ router.get("/review/reviews", isLoggedIn, getUserReviews);
 router.delete("/review/:reviewId", isLoggedIn, deleteReview);
 // Update a review
 router.patch("/review/:reviewId", isLoggedIn, updateReview);
+// Get all products of a specific category
+router.get("/relatedproducts/:categoryName", getRelatedProducts);
 export default router;

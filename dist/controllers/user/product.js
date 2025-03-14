@@ -229,4 +229,38 @@ async function updateReview(req, res) {
         });
     }
 }
-export { getAllProducts, sendReview, deleteReview, updateReview, getSingleProduct, getUserReviews, };
+// Get all products of a specific category
+async function getRelatedProducts(req, res) {
+    try {
+        const { categoryName } = req.params;
+        if (!categoryName) {
+            res.status(400).json({ error: "Category name is required" });
+            return;
+        }
+        const relatedProducts = await db.product.findMany({
+            where: {
+                categoryName,
+            },
+            include: {
+                images: true,
+                reviews: true,
+            },
+        });
+        if (relatedProducts.length === 0) {
+            res
+                .status(200)
+                .json({ message: "No products available fro this category" });
+            return;
+        }
+        res.status(200).json({ products: relatedProducts });
+        return;
+    }
+    catch (error) {
+        console.log(error);
+        res
+            .status(500)
+            .json({ error: "Internal Server Error", details: error.message });
+        return;
+    }
+}
+export { getAllProducts, sendReview, deleteReview, updateReview, getSingleProduct, getUserReviews, getRelatedProducts, };
