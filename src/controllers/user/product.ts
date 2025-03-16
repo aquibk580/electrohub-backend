@@ -337,6 +337,7 @@ async function getRelatedProducts(req: Request, res: Response) {
   }
 }
 
+// Get searched products
 async function searchProducts(req: Request, res: Response) {
   try {
     const query =

@@ -263,6 +263,7 @@ async function getRelatedProducts(req, res) {
         return;
     }
 }
+// Get searched products
 async function searchProducts(req, res) {
     try {
         const query = typeof req.query.query === "string" ? req.query.query.trim() : "";

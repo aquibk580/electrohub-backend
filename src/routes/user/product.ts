@@ -39,4 +39,6 @@ router.get("/relatedproducts/:categoryName", getRelatedProducts);
 
 
 
+
+
 export default router;

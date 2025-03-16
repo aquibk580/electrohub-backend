@@ -34,12 +34,71 @@ async function getSingleSeller(req, res) {
             where: {
                 id: SellerId,
             },
+            include: {
+                products: {
+                    include: {
+                        reviews: true,
+                        images: true,
+                    },
+                },
+            },
         });
         if (!seller) {
             res.status(404).json({ error: "No users available" });
             return;
         }
-        res.status(200).json(seller);
+        const sellerProducts = await db.product.findMany({
+            where: {
+                sellerId: SellerId,
+            },
+            include: {
+                images: true,
+                reviews: true,
+            },
+        });
+        const productIds = sellerProducts.map((product) => product.id);
+        const totalReturns = await db.orderItem.count({
+            where: {
+                productId: {
+                    in: productIds,
+                },
+                status: "Returned",
+            },
+        });
+        const allReviews = seller.products.flatMap((product) => product.reviews);
+        const totalRating = allReviews.reduce((acc, review) => acc + review.rating, 0);
+        const averageRating = allReviews.length > 0 ? totalRating / allReviews.length : 0;
+        const totalSales = await db.orderItem.count({
+            where: {
+                productId: {
+                    in: seller.products.length > 0
+                        ? seller.products.map((product) => product.id)
+                        : [0],
+                },
+            },
+        });
+        const orders = await db.orderItem.findMany({
+            where: {
+                productId: {
+                    in: productIds,
+                },
+            },
+            include: {
+                product: {
+                    include: {
+                        images: true,
+                    },
+                },
+            },
+        });
+        res.status(200).json({
+            seller,
+            averageRating,
+            totalSales,
+            totalReturns,
+            sellerProducts,
+            orders,
+        });
         return;
     }
     catch (error) {

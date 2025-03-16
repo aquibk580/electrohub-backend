@@ -1,10 +1,16 @@
 import { Router } from "express";
 import { isAdminLoggedIn } from "../../middlewares/admin/auth.js";
-import { getAllProducts } from "../../controllers/admin/product.js";
+import {
+  getAllProducts,
+  getTopSellingProducts,
+} from "../../controllers/admin/product.js";
 
 const router: Router = Router();
 
 // Get all products
-router.get("/", isAdminLoggedIn, getAllProducts);
+router.get("/", getAllProducts);
+
+// Get top selling products
+router.get("/topselling/:productCount", getTopSellingProducts);
 
 export default router;
