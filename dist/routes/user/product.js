@@ -1,9 +1,11 @@
 import { Router } from "express";
-import { deleteReview, getAllProducts, getRelatedProducts, getSingleProduct, getUserReviews, sendReview, updateReview, } from "../../controllers/user/product.js";
+import { deleteReview, getAllProducts, getRelatedProducts, getSingleProduct, getUserReviews, sendReview, updateReview, searchProducts } from "../../controllers/user/product.js";
 import { isLoggedIn } from "../../middlewares/auth.js";
 const router = Router();
 // Get all products
 router.get("/", getAllProducts);
+// Search products
+router.get("/search", searchProducts);
 // Get single Product
 router.get("/:productId", getSingleProduct);
 // review a product

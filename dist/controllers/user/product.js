@@ -263,4 +263,33 @@ async function getRelatedProducts(req, res) {
         return;
     }
 }
-export { getAllProducts, sendReview, deleteReview, updateReview, getSingleProduct, getUserReviews, getRelatedProducts, };
+async function searchProducts(req, res) {
+    try {
+        const query = typeof req.query.query === "string" ? req.query.query.trim() : "";
+        if (!query) {
+            res.json({ error: "Query is required to search the products" });
+            return;
+        }
+        const products = await db.product.findMany({
+            where: {
+                name: {
+                    contains: query,
+                    mode: "insensitive",
+                },
+            },
+            take: 4,
+            include: {
+                images: true,
+            },
+        });
+        res.json(products);
+    }
+    catch (error) {
+        console.log("Search error : ", error);
+        res
+            .status(500)
+            .json({ error: "Internal Server Error", details: error.message });
+        return;
+    }
+}
+export { getAllProducts, sendReview, deleteReview, updateReview, getSingleProduct, getUserReviews, getRelatedProducts, searchProducts, };

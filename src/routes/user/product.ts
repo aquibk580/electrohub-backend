@@ -7,6 +7,7 @@ import {
   getUserReviews,
   sendReview,
   updateReview,
+  searchProducts
 } from "../../controllers/user/product.js";
 import { isLoggedIn } from "../../middlewares/auth.js";
 
@@ -14,6 +15,9 @@ const router: Router = Router();
 
 // Get all products
 router.get("/", getAllProducts);
+
+// Search products
+router.get("/search", searchProducts);
 
 // Get single Product
 router.get("/:productId", getSingleProduct);
@@ -32,5 +36,7 @@ router.patch("/review/:reviewId", isLoggedIn, updateReview);
 
 // Get all products of a specific category
 router.get("/relatedproducts/:categoryName", getRelatedProducts);
+
+
 
 export default router;

@@ -4,6 +4,7 @@ import cartRoutes from "./cart.js";
 import wishlistRoutes from "./wishlist.js";
 import productRoutes from "./product.js";
 import orderRoutes from "./order.js";
+import sellerRoutes from "./seller.js";
 import {
   deleteAccount,
   getUserDetails,
@@ -18,6 +19,9 @@ router.use("/auth", authRoutes);
 
 // Products routes
 router.use("/products", productRoutes);
+
+// Seller Routes
+router.use("/sellers", sellerRoutes);
 
 // Cart routes
 router.use("/cart", isLoggedIn, cartRoutes);
