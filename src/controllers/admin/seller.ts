@@ -11,6 +11,9 @@ interface Seller {
   address?: string | null;
   pfp?: string | null;
   provider?: string | null;
+  _count: {
+    products: number;
+  };
 }
 
 async function getAllSellers(req: Request, res: Response) {
@@ -19,6 +22,11 @@ async function getAllSellers(req: Request, res: Response) {
       orderBy: {
         createdAt: "asc",
       },
+      include: {
+        _count: {
+          select: { products: true },
+        },
+      },
     });
 
     if (sellers.length === 0) {
@@ -26,7 +34,12 @@ async function getAllSellers(req: Request, res: Response) {
       return;
     }
 
-    res.status(200).json(sellers);
+    const formattedSellers = sellers.map((seller) => ({
+      ...seller,
+      productsCount: seller._count.products,
+    }));
+
+    res.status(200).json(formattedSellers);
     return;
 
     // You can retrive the sellers at the frontend directly as "response.data" no need to do "response.data.sellers"
@@ -142,4 +155,41 @@ async function getSingleSeller(req: Request, res: Response) {
     return;
   }
 }
-export { getAllSellers, getSingleSeller };
+
+async function getTopSellers(req: Request, res: Response) {
+  try {
+    const topSellers = await db.seller.findMany({
+      orderBy: {
+        products: {
+          _count: "desc",
+        },
+      },
+      include: {
+        _count: {
+          select: { products: true },
+        },
+      },
+    });
+
+    if (topSellers.length === 0) {
+      res.status(200).json({ message: "No Sellers available" });
+      return;
+    }
+
+    const formattedSellers = topSellers.map((seller) => ({
+      ...seller,
+      productsCount: seller._count.products,
+    }));
+
+    res.status(200).json(formattedSellers);
+    return;
+  } catch (error: any) {
+    console.log("ERROR_WHILE_GETTING_TOP_SELLERS", error);
+    res
+      .status(500)
+      .json({ error: "Internal Server Error", details: error.message });
+    return;
+  }
+}
+
+export { getAllSellers, getSingleSeller, getTopSellers };

@@ -23,19 +23,54 @@ async function getAllUsers(req, res) {
     }
 }
 async function getSingleUser(req, res) {
-    const { userId } = req.params;
-    const UserId = parseInt(userId, 10);
+    const params = req.params;
+    const userId = parseInt(params.userId, 10);
     try {
         const user = await db.user.findUnique({
             where: {
-                id: UserId,
+                id: userId,
+            },
+            include: {
+                reviews: {
+                    include: {
+                        product: true,
+                    },
+                },
+                orders: {
+                    include: {
+                        orderItems: {
+                            include: {
+                                product: true,
+                            },
+                        },
+                    },
+                },
             },
         });
         if (!user) {
             res.status(404).json({ error: "User not found" });
             return;
         }
-        res.status(200).json(user);
+        const orderItems = user.orders?.flatMap((order) => order.orderItems) || [];
+        const totalSpend = orderItems.reduce((acc, { product }) => {
+            if (!product || typeof product.price !== "number")
+                return acc;
+            const discount = product.offerPercentage
+                ? (Number(product.offerPercentage) / 100) * product.price
+                : 0;
+            return acc + (product.price - discount);
+        }, 0);
+        const itemsPurchased = orderItems.length;
+        const returns = orderItems.filter((item) => item.status === "Returned").length;
+        const avgOrderValue = itemsPurchased > 0 ? totalSpend / itemsPurchased : 0;
+        res.status(200).json({
+            user,
+            orderItems,
+            totalSpend,
+            itemsPurchased,
+            returns,
+            avgOrderValue,
+        });
         return;
     }
     catch (error) {

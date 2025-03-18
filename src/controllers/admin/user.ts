@@ -1,22 +1,9 @@
 import { Request, Response } from "express";
 import { db } from "../../lib/db.js";
 
-interface User {
-  id: number;
-  name: string;
-  email: string;
-  password?: string | null;
-  answer?: string | null;
-  phone?: string | null;
-  address?: string | null;
-  gender?: string | null;
-  pfp?: string | null;
-  provider?: string | null;
-}
-
 async function getAllUsers(req: Request, res: Response) {
   try {
-    const users: Array<User> = await db.user.findMany({
+    const users = await db.user.findMany({
       orderBy: {
         createdAt: "asc",
       },
@@ -41,12 +28,28 @@ async function getAllUsers(req: Request, res: Response) {
 }
 
 async function getSingleUser(req: Request, res: Response) {
-  const { userId } = req.params;
-  const UserId = parseInt(userId, 10);
+  const params = req.params;
+  const userId = parseInt(params.userId, 10);
   try {
-    const user: User | null = await db.user.findUnique({
+    const user = await db.user.findUnique({
       where: {
-        id: UserId,
+        id: userId,
+      },
+      include: {
+        reviews: {
+          include: {
+            product: true,
+          },
+        },
+        orders: {
+          include: {
+            orderItems: {
+              include: {
+                product: true,
+              },
+            },
+          },
+        },
       },
     });
 
@@ -54,8 +57,32 @@ async function getSingleUser(req: Request, res: Response) {
       res.status(404).json({ error: "User not found" });
       return;
     }
+    const orderItems = user.orders?.flatMap((order) => order.orderItems) || [];
 
-    res.status(200).json(user);
+    const totalSpend = orderItems.reduce((acc, { product }) => {
+      if (!product || typeof product.price !== "number") return acc;
+
+      const discount = product.offerPercentage
+        ? (Number(product.offerPercentage) / 100) * product.price
+        : 0;
+
+      return acc + (product.price - discount);
+    }, 0);
+
+    const itemsPurchased = orderItems.length;
+    const returns = orderItems.filter(
+      (item) => item.status === "Returned"
+    ).length;
+    const avgOrderValue = itemsPurchased > 0 ? totalSpend / itemsPurchased : 0;
+
+    res.status(200).json({
+      user,
+      orderItems,
+      totalSpend,
+      itemsPurchased,
+      returns,
+      avgOrderValue,
+    });
     return;
   } catch (error: any) {
     console.log("ERROR_WHILE_GETTING_ALL_USERS", error);
