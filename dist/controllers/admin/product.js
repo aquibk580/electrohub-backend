@@ -103,7 +103,11 @@ async function getSingleProduct(req, res) {
             include: {
                 images: true,
                 productInfo: true,
-                reviews: true,
+                reviews: {
+                    include: {
+                        user: true,
+                    },
+                },
             },
         });
         if (!product) {
@@ -115,6 +119,54 @@ async function getSingleProduct(req, res) {
     }
     catch (error) {
         console.log(error);
+        res
+            .status(500)
+            .json({ error: "Internal Server Error", details: error.message });
+        return;
     }
 }
-export { getAllProducts, getTopSellingProducts, getProductStats, getSingleProduct, };
+// Update product Status
+async function updateProductStatus(req, res) {
+    try {
+        const params = req.params;
+        const productId = parseInt(params.productId, 10);
+        if (isNaN(productId)) {
+            res.status(200).json({ error: "Missing or invalid product id" });
+            return;
+        }
+        const { status, } = req.body;
+        if (!status) {
+            res.status(400).json({ error: "Status is required" });
+            return;
+        }
+        const product = await db.product.findUnique({
+            where: {
+                id: productId,
+            },
+        });
+        if (!product) {
+            res.status(400).json({ error: "Product not found" });
+            return;
+        }
+        await db.product.update({
+            where: {
+                id: productId,
+            },
+            data: {
+                status: status,
+            },
+        });
+        res
+            .status(200)
+            .json({ message: "Product status updated successfully", product });
+        return;
+    }
+    catch (error) {
+        console.log(error);
+        res
+            .status(500)
+            .json({ error: "Internal Server Error", details: error.message });
+        return;
+    }
+}
+export { getAllProducts, getTopSellingProducts, getProductStats, getSingleProduct, updateProductStatus };

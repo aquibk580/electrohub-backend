@@ -9,7 +9,11 @@ async function getAllProducts(req, res) {
         const skip = (page - 1) * limit;
         const whereClause = category && category !== "All" ? { categoryName: category } : {};
         const products = await db.product.findMany({
-            where: whereClause,
+            where: whereClause && {
+                status: {
+                    in: ["OutOfStock", "Active"],
+                },
+            },
             orderBy: { createdAt: "desc" },
             include: { images: true, productInfo: true, reviews: true },
             skip,

@@ -5,6 +5,7 @@ import {
   getProductStats,
   getSingleProduct,
   getTopSellingProducts,
+  updateProductStatus,
 } from "../../controllers/admin/product.js";
 
 const router: Router = Router();
@@ -17,6 +18,9 @@ router.get("/productStats", getProductStats);
 
 // Get top selling products
 router.get("/topselling/:productCount", getTopSellingProducts);
+
+// Update product status
+router.patch("/updateStatus/:productId", updateProductStatus);
 
 // Get single product
 router.get("/:productId", getSingleProduct);

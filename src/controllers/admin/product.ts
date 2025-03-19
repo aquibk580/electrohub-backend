@@ -114,7 +114,11 @@ async function getSingleProduct(req: Request, res: Response) {
       include: {
         images: true,
         productInfo: true,
-        reviews: true,
+        reviews: {
+          include: {
+            user: true,
+          },
+        },
       },
     });
 
@@ -125,8 +129,65 @@ async function getSingleProduct(req: Request, res: Response) {
 
     res.status(200).json(product);
     return;
-  } catch (error) {
+  } catch (error: any) {
     console.log(error);
+    res
+      .status(500)
+      .json({ error: "Internal Server Error", details: error.message });
+    return;
+  }
+}
+
+// Update product Status
+async function updateProductStatus(req: Request, res: Response) {
+  try {
+    const params = req.params;
+    const productId = parseInt(params.productId, 10);
+
+    if (isNaN(productId)) {
+      res.status(200).json({ error: "Missing or invalid product id" });
+      return;
+    }
+
+    const {
+      status,
+    }: { status: "Active" | "Inactive" | "OutOfStock" | "Discontinued" } =
+      req.body;
+
+    if (!status) {
+      res.status(400).json({ error: "Status is required" });
+      return;
+    }
+
+    const product = await db.product.findUnique({
+      where: {
+        id: productId,
+      },
+    });
+
+    if (!product) {
+      res.status(400).json({ error: "Product not found" });
+      return;
+    }
+
+    await db.product.update({
+      where: {
+        id: productId,
+      },
+      data: {
+        status: status,
+      },
+    });
+    res
+      .status(200)
+      .json({ message: "Product status updated successfully", product });
+    return;
+  } catch (error: any) {
+    console.log(error);
+    res
+      .status(500)
+      .json({ error: "Internal Server Error", details: error.message });
+    return;
   }
 }
 
@@ -135,4 +196,5 @@ export {
   getTopSellingProducts,
   getProductStats,
   getSingleProduct,
+  updateProductStatus
 };
