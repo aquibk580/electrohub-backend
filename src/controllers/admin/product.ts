@@ -1,23 +1,12 @@
 import { Request, Response } from "express";
 import { db } from "../../lib/db.js";
 
-interface ProductDB {
-  id: number;
-  name: string;
-  description: string;
-  price: number;
-  offerPercentage: number | null;
-  stock: number;
-  categoryName: string;
-}
-
 // Get All products for a specific seller
 async function getAllProducts(req: Request, res: Response) {
   try {
-    const products: Array<ProductDB> = await db.product.findMany({
+    const products = await db.product.findMany({
       include: {
         images: true,
-        productInfo: true,
       },
     });
 
@@ -77,4 +66,73 @@ async function getTopSellingProducts(req: Request, res: Response) {
   }
 }
 
-export { getAllProducts, getTopSellingProducts };
+// Get Product Stats
+async function getProductStats(req: Request, res: Response) {
+  try {
+    const totalProducts = await db.product.count({});
+    const inStock = await db.product.count({
+      where: {
+        status: "Active",
+      },
+    });
+    const outOfStock = await db.product.count({
+      where: {
+        status: "OutOfStock",
+      },
+    });
+    const discontinued = await db.product.count({
+      where: {
+        status: "Discontinued",
+      },
+    });
+    const categories = await db.category.count({});
+
+    res
+      .status(200)
+      .json({ totalProducts, inStock, outOfStock, discontinued, categories });
+    return;
+  } catch (error) {
+    console.log(error);
+  }
+}
+
+// Get single product
+async function getSingleProduct(req: Request, res: Response) {
+  try {
+    const params = req.params;
+    const productId = parseInt(params.productId, 10);
+
+    if (isNaN(productId)) {
+      res.status(200).json({ error: "Missing or invalid product id" });
+      return;
+    }
+
+    const product = await db.product.findUnique({
+      where: {
+        id: productId,
+      },
+      include: {
+        images: true,
+        productInfo: true,
+        reviews: true,
+      },
+    });
+
+    if (!product) {
+      res.status(404).json({ where: "Product not found" });
+      return;
+    }
+
+    res.status(200).json(product);
+    return;
+  } catch (error) {
+    console.log(error);
+  }
+}
+
+export {
+  getAllProducts,
+  getTopSellingProducts,
+  getProductStats,
+  getSingleProduct,
+};

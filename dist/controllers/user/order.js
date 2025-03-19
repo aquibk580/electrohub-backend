@@ -48,62 +48,81 @@ async function placeOrder(req, res) {
 }
 async function verifyPayment(req, res) {
     try {
-        const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
+        const { razorpay_order_id, razorpay_payment_id, razorpay_signature, orderData, flag, } = req.body;
         const generatedSignature = crypto
             .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
-            .update(razorpay_order_id + "|" + razorpay_payment_id)
+            .update(`${razorpay_order_id}|${razorpay_payment_id}`)
             .digest("hex");
-        if (generatedSignature === razorpay_signature) {
-            const { orderData } = req.body;
-            console.log(orderData);
-            const { total, items } = orderData;
-            const parsedTotal = parseInt(total, 10);
-            const userId = parseInt(req.user.id);
-            const order = await db.order.create({
-                data: {
-                    userId,
-                    total: parsedTotal,
-                    orderItems: {
-                        create: items.map((item) => ({
-                            productId: parseInt(item.productId),
-                            quantity: parseInt(item.quantity),
-                        })),
-                    },
-                },
-                include: {
-                    orderItems: true,
-                },
-            });
-            const cart = await db.cart.findUnique({
-                where: {
-                    userId,
-                },
-            });
-            await db.cartItem.deleteMany({
-                where: {
-                    cartId: cart.id,
-                },
-            });
-            res.status(200).json({
-                success: true,
-                message: "Payment verified successfully",
-                order,
-            });
+        if (generatedSignature !== razorpay_signature) {
+            res.status(400).json({ success: false, message: "Payment verification failed" });
             return;
+        }
+        const userId = parseInt(req.user.id);
+        let total;
+        let items;
+        if (flag === "buy") {
+            if (!orderData || !orderData.items || orderData.items.length === 0) {
+                res.status(400).json({ success: false, message: "Invalid order data" });
+                return;
+            }
+            total = parseInt(orderData.total, 10);
+            items = orderData.items.map((item) => ({
+                productId: parseInt(item.productId),
+                quantity: parseInt(item.quantity),
+            }));
+        }
+        else if (flag === "cart") {
+            // "Cart Checkout" scenario: Fetch order from the cart
+            const cart = await db.cart.findUnique({
+                where: { userId },
+                include: { items: { include: { product: true } } },
+            });
+            if (!cart || cart.items.length === 0) {
+                res.status(404).json({ success: false, message: "Cart is empty" });
+                return;
+            }
+            total = cart.items.reduce((acc, item) => acc + item.product.price * item.quantity, 0);
+            items = cart.items.map((cartItem) => ({
+                productId: cartItem.product.id,
+                quantity: cartItem.quantity,
+            }));
+            // Clear the cart only if it's a cart checkout
+            await db.cartItem.deleteMany({ where: { cartId: cart.id } });
         }
         else {
-            res
-                .status(400)
-                .json({ success: false, message: "Payment verification failed" });
+            res.status(400).json({ success: false, message: "Invalid flag provided" });
             return;
         }
+        // Create the order
+        const order = await db.order.create({
+            data: {
+                userId,
+                total,
+                orderItems: {
+                    create: items.map((item) => ({
+                        productId: item.productId,
+                        quantity: item.quantity,
+                    })),
+                },
+            },
+            include: { orderItems: true },
+        });
+        // Update product stock
+        await db.$transaction([
+            ...items.map((item) => db.product.update({
+                where: { id: item.productId },
+                data: { stock: { decrement: item.quantity } },
+            })),
+            db.product.updateMany({
+                where: { stock: 0 },
+                data: { status: "OutOfStock" },
+            }),
+        ]);
+        res.status(200).json({ success: true, message: "Payment verified successfully", order });
     }
     catch (error) {
-        console.log(error);
-        res
-            .status(500)
-            .json({ error: "Internal Server Error", details: error.message });
-        return;
+        console.error("Payment verification error:", error);
+        res.status(500).json({ error: "Internal Server Error", details: error.message });
     }
 }
 async function getAllOrders(req, res) {

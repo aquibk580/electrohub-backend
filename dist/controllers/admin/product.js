@@ -5,7 +5,6 @@ async function getAllProducts(req, res) {
         const products = await db.product.findMany({
             include: {
                 images: true,
-                productInfo: true,
             },
         });
         if (products.length === 0) {
@@ -59,4 +58,63 @@ async function getTopSellingProducts(req, res) {
         return;
     }
 }
-export { getAllProducts, getTopSellingProducts };
+// Get Product Stats
+async function getProductStats(req, res) {
+    try {
+        const totalProducts = await db.product.count({});
+        const inStock = await db.product.count({
+            where: {
+                status: "Active",
+            },
+        });
+        const outOfStock = await db.product.count({
+            where: {
+                status: "OutOfStock",
+            },
+        });
+        const discontinued = await db.product.count({
+            where: {
+                status: "Discontinued",
+            },
+        });
+        const categories = await db.category.count({});
+        res
+            .status(200)
+            .json({ totalProducts, inStock, outOfStock, discontinued, categories });
+        return;
+    }
+    catch (error) {
+        console.log(error);
+    }
+}
+// Get single product
+async function getSingleProduct(req, res) {
+    try {
+        const params = req.params;
+        const productId = parseInt(params.productId, 10);
+        if (isNaN(productId)) {
+            res.status(200).json({ error: "Missing or invalid product id" });
+            return;
+        }
+        const product = await db.product.findUnique({
+            where: {
+                id: productId,
+            },
+            include: {
+                images: true,
+                productInfo: true,
+                reviews: true,
+            },
+        });
+        if (!product) {
+            res.status(404).json({ where: "Product not found" });
+            return;
+        }
+        res.status(200).json(product);
+        return;
+    }
+    catch (error) {
+        console.log(error);
+    }
+}
+export { getAllProducts, getTopSellingProducts, getProductStats, getSingleProduct, };

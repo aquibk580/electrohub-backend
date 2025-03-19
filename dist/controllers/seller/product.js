@@ -323,14 +323,24 @@ async function updateProduct(req, res) {
         }
         const validatedData = await productUpdateSchema.parse(req.body);
         const { brand, details, categoryName, ...productData } = validatedData;
-        if (productData.stock)
+        if (productData.stock !== undefined)
             productData.stock = parseInt(productData.stock);
-        if (productData.price)
+        if (productData.price !== undefined)
             productData.price = parseFloat(productData.price);
-        if (productData.offerPercentage) {
+        if (productData.offerPercentage !== undefined) {
             productData.offerPercentage = parseInt(productData.offerPercentage);
         }
         const updatedProductData = Object.fromEntries(Object.entries(productData).filter(([_, value]) => value !== undefined));
+        // Check if the product is being restocked (status is not "OutOfStock")
+        if (updatedProductData.status &&
+            updatedProductData.status !== "OutOfStock" &&
+            (!updatedProductData.stock || updatedProductData.stock === 0)) {
+            res.status(400).json({
+                error: "Stock quantity must be greater than 0 when restocking a product.",
+                flag: "RestockError",
+            });
+            return;
+        }
         const uploadedFiles = req.files;
         const newImageUrls = await Promise.all(uploadedFiles.map(async (file) => {
             validateFile(file);
@@ -369,6 +379,8 @@ async function updateProduct(req, res) {
                 },
                 include: { productInfo: true, images: true },
             });
+        }
+        else if (productData.status !== "OutOfStock") {
         }
         else {
             updatedProduct = await db.product.update({
@@ -453,7 +465,11 @@ async function getSingleProduct(req, res) {
             include: {
                 images: true,
                 productInfo: true,
-                reviews: true,
+                reviews: {
+                    include: {
+                        user: true,
+                    },
+                },
             },
         });
         if (!product) {

@@ -405,16 +405,31 @@ async function updateProduct(req: Request, res: Response) {
 
     const { brand, details, categoryName, ...productData } = validatedData;
 
-    if (productData.stock) productData.stock = parseInt(productData.stock);
-
-    if (productData.price) productData.price = parseFloat(productData.price);
-    if (productData.offerPercentage) {
+    if (productData.stock !== undefined)
+      productData.stock = parseInt(productData.stock);
+    if (productData.price !== undefined)
+      productData.price = parseFloat(productData.price);
+    if (productData.offerPercentage !== undefined) {
       productData.offerPercentage = parseInt(productData.offerPercentage);
     }
 
     const updatedProductData = Object.fromEntries(
       Object.entries(productData).filter(([_, value]) => value !== undefined)
     );
+
+    // Check if the product is being restocked (status is not "OutOfStock")
+    if (
+      updatedProductData.status &&
+      updatedProductData.status !== "OutOfStock" &&
+      (!updatedProductData.stock || updatedProductData.stock === 0)
+    ) {
+      res.status(400).json({
+        error:
+          "Stock quantity must be greater than 0 when restocking a product.",
+        flag: "RestockError",
+      });
+      return;
+    }
 
     const uploadedFiles = req.files as Express.Multer.File[];
     const newImageUrls = await Promise.all(
@@ -464,6 +479,7 @@ async function updateProduct(req: Request, res: Response) {
         },
         include: { productInfo: true, images: true },
       });
+    } else if (productData.status !== "OutOfStock") {
     } else {
       updatedProduct = await db.product.update({
         where: { id: ProductId },
@@ -558,7 +574,11 @@ async function getSingleProduct(req: Request, res: Response) {
       include: {
         images: true,
         productInfo: true,
-        reviews: true,
+        reviews: {
+          include: {
+            user: true,
+          },
+        },
       },
     });
 
