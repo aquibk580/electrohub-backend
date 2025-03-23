@@ -5,7 +5,7 @@ import sellerRoutes from "./seller.js";
 import productRoutes from "./product.js";
 import cmsRoutes from "./cms/index.js";
 import { isAdminLoggedIn } from "../../middlewares/admin/auth.js";
-import { getSalesStatistics } from "../../controllers/admin/index.js";
+import { getOrdersData, getSalesStatistics, getSingleOrder, } from "../../controllers/admin/index.js";
 const router = Router();
 // Auth Routes
 router.use("/auth", authRoutes);
@@ -19,4 +19,8 @@ router.use("/cms", isAdminLoggedIn, cmsRoutes);
 router.use("/products", isAdminLoggedIn, productRoutes);
 // Sales Route
 router.get("/sales", isAdminLoggedIn, getSalesStatistics);
+// OrderItems and Order Stats
+router.get("/orders", isAdminLoggedIn, getOrdersData);
+// Get single order
+router.get("/orders/:id", isAdminLoggedIn, getSingleOrder);
 export default router;

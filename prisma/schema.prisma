@@ -57,7 +57,7 @@ model Admin {
 }
 
 enum OrderStatus {
-  OrderConfirmed
+  OrderConfirmed  
   Shipped
   Delivered
   Cancelled

@@ -92,3 +92,138 @@ export async function getSalesStatistics(req: Request, res: Response) {
     return;
   }
 }
+
+export async function getOrdersData(req: Request, res: Response) {
+  try {
+    const orderItems = await db.orderItem.findMany({
+      include: {
+        order: {
+          select: {
+            user: {
+              select: {
+                name: true,
+              },
+            },
+          },
+        },
+        product: {
+          include: {
+            images: true,
+          },
+        },
+      },
+    });
+
+    if (orderItems.length === 0) {
+      res.status(404).json({ error: "No Orders available" });
+      return;
+    }
+
+    const orders = await db.order.count({});
+    const returns = await db.orderItem.count({
+      where: {
+        status: "Returned",
+      },
+    });
+    const fulfilledOrders = await db.orderItem.count({
+      where: {
+        status: "Delivered",
+      },
+    });
+
+    // Transform orderItems to include customer name
+    const formattedOrderItems = orderItems.map((orderItem) => ({
+      ...orderItem,
+      customerName: orderItem.order?.user?.name || "Unknown", // Fallback if no user is associated
+    }));
+
+    res.status(200).json({
+      orderItems: formattedOrderItems,
+      orders,
+      returns,
+      fulfilledOrders,
+    });
+    return;
+  } catch (error: any) {
+    console.log("ERROR_WHILE_GETTING_ORDERS_DATA");
+    res
+      .status(500)
+      .json({ error: "Internal Server Error", details: error.message });
+    return;
+  }
+}
+
+export async function getSingleOrder(req: Request, res: Response) {
+  try {
+    const orderId = parseInt(req.params.id, 10);
+
+    const orderItem = await db.orderItem.findUnique({
+      where: {
+        id: orderId,
+      },
+      include: {
+        order: {
+          select: {
+            user: true,
+          },
+        },
+        product: {
+          include: {
+            images: true,
+            seller: true, // Fetch seller details
+          },
+        },
+      },
+    });
+
+    if (!orderItem) {
+      res.status(404).json({ error: "OrderItem not found" });
+      return;
+    }
+
+    const sellerId = orderItem.product?.seller?.id;
+    let averageRating: number | null = null;
+    let totalOrders: number | null = null;
+
+    if (sellerId) {
+      const sellerReviewData = await db.review.aggregate({
+        where: {
+          product: {
+            sellerId: sellerId, // Filter reviews for products of this seller
+          },
+        },
+        _avg: {
+          rating: true, // Compute the average rating
+        },
+      });
+
+      averageRating = sellerReviewData._avg.rating || 0; // Default to 0 if no reviews exist
+
+      const totalSellerOrders = await db.orderItem.count({
+        where: {
+          product: {
+            sellerId,
+          },
+        },
+      });
+
+      totalOrders = totalSellerOrders;
+    }
+
+    const formattedOrderItem = {
+      ...orderItem,
+      user: orderItem.order?.user,
+      sellerAverageRating: averageRating,
+      totalSellerOrders: totalOrders,
+    };
+
+    res.status(200).json(formattedOrderItem);
+    return;
+  } catch (error: any) {
+    console.log("ERROR_WHILE_GETTING_SINGLE_ORDER", error);
+    res
+      .status(500)
+      .json({ error: "Internal Server Error", details: error.message });
+    return;
+  }
+}
