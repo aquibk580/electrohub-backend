@@ -5,6 +5,7 @@ import wishlistRoutes from "./wishlist.js";
 import productRoutes from "./product.js";
 import orderRoutes from "./order.js";
 import sellerRoutes from "./seller.js";
+import contactRoutes from "./contact.js";
 import { deleteAccount, getUserDetails, updateUserDetails, } from "../../controllers/user/index.js";
 import { isLoggedIn, isSameEntity } from "../../middlewares/auth.js";
 const router = Router();
@@ -14,6 +15,8 @@ router.use("/auth", authRoutes);
 router.use("/products", productRoutes);
 // Seller Routes
 router.use("/sellers", sellerRoutes);
+// Contact routes
+router.use("/contact", contactRoutes);
 // Cart routes
 router.use("/cart", isLoggedIn, cartRoutes);
 // Wishlist routes

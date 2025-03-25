@@ -4,6 +4,7 @@ import {
   createCategory,
   deleteCategory,
   getAllCategories,
+  getAllCategoriesWithCount,
   updateCategory,
 } from "../../../controllers/admin/category.js";
 import { upload } from "../../../lib/multer.js";
@@ -15,6 +16,9 @@ router.post("/", isAdminLoggedIn, upload.single("image"), createCategory);
 
 // Get all categories
 router.get("/", isAdminLoggedIn, getAllCategories);
+
+// Get all categories with product caount
+router.get("/productCount", isAdminLoggedIn, getAllCategoriesWithCount);
 
 // Delete single category
 router.delete("/:categoryName", isAdminLoggedIn, deleteCategory);

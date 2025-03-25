@@ -96,6 +96,42 @@ async function getAllCategories(req: Request, res: Response) {
   }
 }
 
+// Get all categories with count
+async function getAllCategoriesWithCount(req: Request, res: Response) {
+  try {
+    const categories = await db.category.findMany({
+      orderBy: {
+        createdAt: "asc",
+      },
+      include: {
+        _count: {
+          select: { products: true },
+        },
+      },
+    });
+
+    if (categories.length === 0) {
+      res.status(404).json({ error: "Categories not available" });
+      return;
+    }
+
+    const formattedCategories = categories.map((category) => ({
+      name: category.name,
+      productCount: category._count.products,
+      createdAt: category.createdAt,
+    }));
+
+    res.status(200).json(formattedCategories);
+    return;
+  } catch (error: any) {
+    console.log("ERROR_WHILE_GETTING_ALL_CATEGORIES", error);
+    res
+      .status(500)
+      .json({ error: "Internal Server Error", details: error.message });
+    return;
+  }
+}
+
 // Delete single category
 async function deleteCategory(req: Request, res: Response) {
   const { categoryName } = req.params;
@@ -210,4 +246,10 @@ async function updateCategory(req: Request, res: Response) {
   }
 }
 
-export { createCategory, getAllCategories, deleteCategory, updateCategory };
+export {
+  createCategory,
+  getAllCategories,
+  deleteCategory,
+  updateCategory,
+  getAllCategoriesWithCount,
+};
