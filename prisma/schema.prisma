@@ -211,12 +211,18 @@ model ProductCarousel {
   isActive Boolean @default(true)
 }
 
+enum UserType {
+  Seller
+  User
+}
+
 model Message {
   id        Int      @id @default(autoincrement())
   name      String
   email     String
   subject   String
   message   String
+  userType  UserType @default(User)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
