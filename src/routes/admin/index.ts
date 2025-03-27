@@ -7,6 +7,7 @@ import cmsRoutes from "./cms/index.js";
 import contactRoutes from "./contact.js";
 import { isAdminLoggedIn } from "../../middlewares/admin/auth.js";
 import {
+  getAllAdmins,
   getOrdersData,
   getSalesStatistics,
   getSingleOrder,
@@ -22,6 +23,9 @@ router.use("/users", isAdminLoggedIn, userRoutes);
 
 // Seller Routes
 router.use("/sellers", isAdminLoggedIn, sellerRoutes);
+
+// Get all admins
+router.get("/admins", isAdminLoggedIn, getAllAdmins);
 
 // contact routes
 router.use("/messages", isAdminLoggedIn, contactRoutes);

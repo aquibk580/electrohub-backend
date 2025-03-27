@@ -194,3 +194,21 @@ export async function getSingleOrder(req, res) {
         return;
     }
 }
+export async function getAllAdmins(req, res) {
+    try {
+        const admins = await db.admin.findMany({});
+        if (admins.length === 0) {
+            res.status(404).json({ message: "No Admin found" });
+            return;
+        }
+        res.status(200).json(admins);
+        return;
+    }
+    catch (error) {
+        console.log("ERROR_WHILE_GETTING_ALL_ADMINS");
+        res
+            .status(500)
+            .json({ error: "Internal Server Error", details: error.message });
+        return;
+    }
+}
