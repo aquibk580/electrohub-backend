@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { z } from "zod";
-import { db } from "../../lib/db.js";
+import { db } from "../lib/db.js";
 
 const messageSchema = z.object({
   name: z
@@ -19,28 +19,12 @@ const messageSchema = z.object({
     .trim()
     .min(3, "Message must be at least 3 characters long")
     .max(1000, "Message is too long"),
+  userType: z.enum(["Seller", "User"]).default("User"),
 });
 
 export async function sendMessage(req: Request, res: Response) {
   try {
     const messageData = messageSchema.parse(req.body);
-
-    const recentMessage = await db.message.findFirst({
-      where: { email: messageData.email },
-      orderBy: { id: "desc" },
-    });
-
-    if (recentMessage) {
-      const minutesSinceLastMessage =
-        (Date.now() - new Date(recentMessage.createdAt).getTime()) / 60000;
-      if (minutesSinceLastMessage < 5) {
-        res
-          .status(429)
-          .json({ error: "Please wait before sending another message." });
-        return;
-      }
-    }
-
     const message = await db.message.create({ data: messageData });
 
     res.status(201).json(message);

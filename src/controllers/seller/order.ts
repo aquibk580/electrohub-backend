@@ -2,53 +2,39 @@ import type { Request, Response } from "express";
 import { db } from "../../lib/db.js";
 import type { UserPayload } from "../../types/Payload";
 import { OrderStatus } from "@prisma/client";
+import { startOfDay, subDays } from "date-fns";
 
-async function getAllOrders(req: Request, res: Response) {
+async function getAllOrdersData(req: Request, res: Response) {
   try {
     const sellerId = Number.parseInt((req.user as UserPayload).id, 10);
-
+    
     if (isNaN(sellerId)) {
-      res.status(400).json({ error: "Invalid or missing seller id" });
+      res.status(400).json({ error: "Invalid or missing seller ID" });
       return;
     }
-    console.log(sellerId);
 
     const orders = await db.order.findMany({
       where: {
         orderItems: {
           some: {
-            product: {
-              sellerId: sellerId,
-            },
+            product: { sellerId },
           },
         },
       },
+      orderBy: { createdAt: "desc" },
       include: {
         user: true,
         orderItems: {
-          where: {
-            product: {
-              sellerId: sellerId,
-            },
-          },
           include: {
             product: {
-              include: {
-                seller: true,
-                images: true,
-                productInfo: true,
-              },
+              include: { seller: true, images: true, productInfo: true },
             },
           },
         },
       },
     });
 
-    const filteredOrders = orders.filter(
-      (order) => order.orderItems.length > 0
-    );
-
-    res.status(200).json(filteredOrders);
+    res.status(200).json({ orders });
     return;
   } catch (error: any) {
     res
@@ -146,4 +132,4 @@ async function getSingleOrder(req: Request, res: Response) {
     return;
   }
 }
-export { getAllOrders, updateOrderStatus, getSingleOrder };
+export { getAllOrdersData, updateOrderStatus, getSingleOrder };

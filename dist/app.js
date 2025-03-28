@@ -12,6 +12,7 @@ import categoryRoutes from "./routes/cms/category.js";
 import bannerCarouselRoutes from "./routes/cms/bannerCarousel.js";
 import productCarouselRoutes from "./routes/cms/productCarousel.js";
 import passport from "passport";
+import contactRoutes from "./routes/contact.js";
 config();
 const port = 8000;
 const app = express();
@@ -31,6 +32,7 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/categories", categoryRoutes);
 app.use("/api/banner-carousels", bannerCarouselRoutes);
 app.use("/api/product-carousels", productCarouselRoutes);
+app.use("/api/contact", contactRoutes);
 app.listen(port, () => {
     console.log(`Server is running on ${port}`);
 });

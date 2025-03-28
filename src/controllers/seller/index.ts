@@ -3,6 +3,8 @@ import { Request, Response } from "express";
 import { db } from "../../lib/db.js";
 import { z, ZodSchema } from "zod";
 import cloudinary, { uploadToCloudinary } from "../../lib/cloudinary.js";
+import { UserPayload } from "../../types/Payload.js";
+import { startOfDay, subDays } from "date-fns";
 
 interface Seller {
   id: number;
@@ -182,4 +184,134 @@ async function updateSellerDetails(req: Request, res: Response) {
   }
 }
 
-export { deleteAccount, getSellerDetails, updateSellerDetails };
+async function getSellerSalesStatistics(req: Request, res: Response) {
+  try {
+    const sellerId = Number.parseInt((req.user as UserPayload).id, 10);
+    // Calculate sales for the last 7 days in a single query
+    const startOfWeek = startOfDay(subDays(new Date(), 6));
+
+    const orderItems = await db.orderItem.findMany({
+      where: {
+        product: { sellerId },
+        createdAt: { gte: startOfWeek },
+      },
+      include: { product: true },
+    });
+
+    const weeklySalesMap = new Map<string, number>();
+
+    orderItems.forEach((order) => {
+      if (!order.product) return;
+      const dateKey = startOfDay(order.createdAt).toISOString();
+      const saleValue =
+        order.product.price *
+        (1 -
+          (order.product.offerPercentage
+            ? order.product.offerPercentage / 100
+            : 0));
+      weeklySalesMap.set(
+        dateKey,
+        (weeklySalesMap.get(dateKey) || 0) + saleValue
+      );
+    });
+
+    const weeklySales = [...Array(7)]
+      .map((_, i) => {
+        const day = startOfDay(subDays(new Date(), i)).toISOString();
+        return { date: day, sales: weeklySalesMap.get(day) || 0 };
+      })
+      .reverse();
+
+    // Fetch categories
+    const categories = await db.category.findMany({
+      where: {
+        products: { some: { sellerId } },
+      },
+      orderBy: { createdAt: "asc" },
+      select: {
+        name: true,
+        createdAt: true,
+        _count: {
+          select: {
+            products: {
+              where: { sellerId },
+            },
+          },
+        },
+      },
+    });
+
+    const formattedCategories = categories.map((category) => ({
+      name: category.name,
+      productCount: category._count.products,
+      createdAt: category.createdAt,
+    }));
+
+    res.status(200).json({ weeklySales, categories: formattedCategories });
+    return;
+  } catch (error: any) {
+    console.error("ERROR_WHILE_GETTING_SALES_STATISTICS", error);
+
+    res
+      .status(500)
+      .json({ error: "Internal server error", details: error.message });
+    return;
+  }
+}
+
+async function getProfileStatistics(req: Request, res: Response) {
+  try {
+    const sellerId = Number.parseInt((req.user as UserPayload).id, 10);
+
+    const orderItems = await db.orderItem.findMany({
+      where: {
+        product: {
+          sellerId,
+        },
+      },
+      include: {
+        product: true,
+      },
+    });
+
+    const totalSales = orderItems.reduce((acc, { product }) => {
+      return (
+        acc +
+        (product?.offerPercentage
+          ? product.price - (product.offerPercentage / 100) * product?.price
+          : product!.price)
+      );
+    }, 0);
+
+    const returnedItems = orderItems.filter(
+      (orderItem) => orderItem.status === "Returned"
+    ).length;
+
+    const notDeliveredItems = orderItems.filter((orderItem) =>
+      ["OrderConfirmed", "Shipped"].includes(orderItem.status)
+    ).length;
+
+    res.status(200).json({
+      orderItems: orderItems.length,
+      totalSales,
+      returnedItems,
+      notDeliveredItems,
+    });
+    return;
+  } catch (error: any) {
+    console.error("ERROR_WHILE_GETTING_SALES_STATISTICS", error);
+
+    res
+      .status(500)
+      .json({ error: "Internal server error", details: error.message });
+    return;
+  }
+}
+
+export {
+  deleteAccount,
+  getSellerDetails,
+  updateSellerDetails,
+  getSellerSalesStatistics,
+  getProfileStatistics,
+};
