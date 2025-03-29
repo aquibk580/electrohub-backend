@@ -297,4 +297,29 @@ async function searchProducts(req, res) {
         return;
     }
 }
-export { getAllProducts, sendReview, deleteReview, updateReview, getSingleProduct, getUserReviews, getRelatedProducts, searchProducts, };
+async function getDeal(req, res) {
+    try {
+        const product = await db.product.findFirst({
+            orderBy: {
+                offerPercentage: "desc",
+            },
+            include: {
+                images: true,
+            },
+        });
+        if (!product) {
+            res.status(404).json({ error: "Product not found" });
+            return;
+        }
+        res.status(200).json(product);
+        return;
+    }
+    catch (error) {
+        console.log("ERROR_WHILE_GETTING_DEAL+PRODUCT", error);
+        res
+            .status(500)
+            .json({ error: "Internal Server Error", details: error.message });
+        return;
+    }
+}
+export { getAllProducts, sendReview, deleteReview, updateReview, getSingleProduct, getUserReviews, getRelatedProducts, searchProducts, getDeal, };
