@@ -16,6 +16,7 @@ const router: Router = Router();
 // Get all products
 router.get("/", getAllProducts);
 
+
 // Search products
 router.get("/search", searchProducts);
 
