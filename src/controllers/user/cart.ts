@@ -80,6 +80,11 @@ async function addToCart(req: Request, res: Response) {
     const { productId } = req.params;
     const ProductId = parseInt(productId, 10);
 
+    if (isNaN(ProductId)) {
+      res.status(400).json({ error: "Missing or Invalid product Id" });
+      return;
+    }
+
     const userId = (req.user as UserPayload).id;
     const parsedUserId = parseInt(userId, 10);
 
@@ -89,7 +94,12 @@ async function addToCart(req: Request, res: Response) {
     }
 
     const { quantity } = await cartItemSchema.parse(req.body);
-    const parsedQuantity = parseInt(quantity, 10);
+    const parsedQuantity = Number(quantity);
+
+    if (!parsedQuantity || parsedQuantity <= 0) {
+      res.status(400).json({ error: "Invalid quantity value" });
+      return;
+    }
 
     let cart: Cart;
     const existingCart: Cart | null = await db.cart.findUnique({
@@ -108,8 +118,9 @@ async function addToCart(req: Request, res: Response) {
       cart = existingCart;
     }
 
-    const existingCartItem: CartItem | null = await db.cartItem.findUnique({
+    const existingCartItem: CartItem | null = await db.cartItem.findFirst({
       where: {
+        cartId: cart.id,
         productId: ProductId,
       },
     });
@@ -118,7 +129,7 @@ async function addToCart(req: Request, res: Response) {
     if (existingCartItem) {
       cartItem = await db.cartItem.update({
         where: {
-          productId: ProductId,
+          id: existingCartItem.id,
         },
         data: {
           quantity: existingCartItem.quantity + 1,
@@ -216,12 +227,10 @@ async function updateCartitem(req: Request, res: Response) {
       data: { quantity: parsedQuantity },
     });
 
-    res
-      .status(200)
-      .json({
-        message: "Quantity updated successfully",
-        cartItem: updatedCartItem,
-      });
+    res.status(200).json({
+      message: "Quantity updated successfully",
+      cartItem: updatedCartItem,
+    });
     return;
   } catch (error: any) {
     console.error(error);
