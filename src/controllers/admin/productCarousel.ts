@@ -94,8 +94,8 @@ async function getAllProductCarousels(req: Request, res: Response) {
 }
 
 const updateProductCarouselSchema: ZodSchema = z.object({
-  href: z.string().min(3, "Href must be at least 3 character long").optional(),
-  name: z.string().min(3, "Name must be at least 3 character long").optional(),
+  href: z.string().min(1, "Href must be at least 1 character long").optional(),
+  name: z.string().min(1, "Name must be at least 3 character long").optional(),
   price: z.string().min(1, "Name must be at least 3 character long").optional(),
   isActive: z.string().optional(),
 });
