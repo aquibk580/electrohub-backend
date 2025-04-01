@@ -13,6 +13,7 @@ import bannerCarouselRoutes from "./routes/cms/bannerCarousel.js";
 import productCarouselRoutes from "./routes/cms/productCarousel.js";
 import passport from "passport";
 import contactRoutes from "./routes/contact.js";
+import removebg from "./routes/seller/bg-remove.js"
 
 config();
 
@@ -38,6 +39,7 @@ app.use("/api/categories", categoryRoutes);
 app.use("/api/banner-carousels", bannerCarouselRoutes);
 app.use("/api/product-carousels", productCarouselRoutes);
 app.use("/api/contact", contactRoutes);
+app.use("/api/remove-bg", removebg)
 
 app.listen(port, () => {
   console.log(`Server is running on ${port}`);
