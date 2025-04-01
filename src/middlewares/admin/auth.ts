@@ -11,7 +11,12 @@ export async function isAdminLoggedIn(
     const token = req.cookies.adminToken;
 
     if (!token) {
-      res.status(401).json({ error: "Unauthorized. No token provided." });
+      res
+        .status(401)
+        .json({
+          error: "Unauthorized. No token provided.",
+          flag: "NoAdminTokenProvided",
+        });
       return;
     }
 

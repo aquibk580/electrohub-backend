@@ -11,7 +11,12 @@ export async function isLoggedIn(
     const token = req.cookies.token;
 
     if (!token) {
-      res.status(401).json({ error: "Unauthorized. No token provided." });
+      res
+        .status(401)
+        .json({
+          error: "Unauthorized. No token provided.",
+          flag: "NoTokenProvided",
+        });
       return;
     }
 
