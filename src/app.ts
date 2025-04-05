@@ -14,7 +14,7 @@ import productCarouselRoutes from "./routes/cms/productCarousel.js";
 import passport from "passport";
 import contactRoutes from "./routes/contact.js";
 import removebg from "./routes/seller/bg-remove.js"
-
+import sendMail from "./routes/user/sendMail.js";
 config();
 
 const port = 8000;
@@ -40,6 +40,8 @@ app.use("/api/banner-carousels", bannerCarouselRoutes);
 app.use("/api/product-carousels", productCarouselRoutes);
 app.use("/api/contact", contactRoutes);
 app.use("/api/remove-bg", removebg)
+
+app.use("/api/sendmail", sendMail)
 
 app.listen(port, () => {
   console.log(`Server is running on ${port}`);
