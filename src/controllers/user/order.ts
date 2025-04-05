@@ -76,7 +76,9 @@ async function verifyPayment(req: Request, res: Response) {
       .digest("hex");
 
     if (generatedSignature !== razorpay_signature) {
-      res.status(400).json({ success: false, message: "Payment verification failed" });
+      res
+        .status(400)
+        .json({ success: false, message: "Payment verification failed" });
       return;
     }
 
@@ -107,7 +109,10 @@ async function verifyPayment(req: Request, res: Response) {
         return;
       }
 
-      total = cart.items.reduce((acc, item) => acc + item.product.price * item.quantity, 0);
+      total = cart.items.reduce(
+        (acc, item) => acc + item.product.price * item.quantity,
+        0
+      );
       items = cart.items.map((cartItem) => ({
         productId: cartItem.product.id,
         quantity: cartItem.quantity,
@@ -116,7 +121,9 @@ async function verifyPayment(req: Request, res: Response) {
       // Clear the cart only if it's a cart checkout
       await db.cartItem.deleteMany({ where: { cartId: cart.id } });
     } else {
-      res.status(400).json({ success: false, message: "Invalid flag provided" });
+      res
+        .status(400)
+        .json({ success: false, message: "Invalid flag provided" });
       return;
     }
 
@@ -132,7 +139,17 @@ async function verifyPayment(req: Request, res: Response) {
           })),
         },
       },
-      include: { orderItems: true },
+      include: {
+        orderItems: {
+          include: {
+            product: {
+              include: {
+                images: true,
+              },
+            },
+          },
+        },
+      },
     });
 
     // Update product stock
@@ -149,10 +166,14 @@ async function verifyPayment(req: Request, res: Response) {
       }),
     ]);
 
-    res.status(200).json({ success: true, message: "Payment verified successfully", order });
+    res
+      .status(200)
+      .json({ success: true, message: "Payment verified successfully", order });
   } catch (error: any) {
     console.error("Payment verification error:", error);
-    res.status(500).json({ error: "Internal Server Error", details: error.message });
+    res
+      .status(500)
+      .json({ error: "Internal Server Error", details: error.message });
   }
 }
 

@@ -140,6 +140,10 @@ async function updateUserDetails(req: Request, res: Response) {
       updatedData.password = await bcrypt.hash(userData.password, 10);
     }
 
+    if (userData.answer) {
+      updatedData.answer = await bcrypt.hash(userData.answer, 10);
+    }
+
     const updatedUser = await db.user.update({
       where: { id: userId },
       data: updatedData,
