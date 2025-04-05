@@ -140,6 +140,7 @@ async function verifyPayment(req: Request, res: Response) {
         },
       },
       include: {
+        user: true,
         orderItems: {
           include: {
             product: {

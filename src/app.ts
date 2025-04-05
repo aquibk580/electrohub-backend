@@ -40,7 +40,6 @@ app.use("/api/banner-carousels", bannerCarouselRoutes);
 app.use("/api/product-carousels", productCarouselRoutes);
 app.use("/api/contact", contactRoutes);
 app.use("/api/remove-bg", removebg)
-
 app.use("/api/sendmail", sendMail)
 
 app.listen(port, () => {
