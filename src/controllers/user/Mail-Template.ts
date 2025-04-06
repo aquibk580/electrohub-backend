@@ -1,10 +1,13 @@
+import { formatDate, formatPrice } from "../../lib/utils.js";
+import { Order } from "../../types/entityTypes";
+
 const getInfoTemplate = (data: {
-    message: string
-    image?: string
-    title?: string
+  message: string;
+  image?: string;
+  title?: string;
 }) => {
-    const { message, image, title = "Information" } = data
-    return `
+  const { message, image, title = "Information" } = data;
+  return `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -848,15 +851,16 @@ const getInfoTemplate = (data: {
   </div>
 </body>
 </html>
-`}
+`;
+};
 
 const getOrderCancelledTemplate = (data: {
-    message: string
-    image?:string
-    title?: string
+  message: string;
+  image?: string;
+  title?: string;
 }) => {
-    const { message, image, title = "Order Confirmation" } = data
-    return `
+  const { message, image, title = "Order Confirmation" } = data;
+  return `
     <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1430,12 +1434,11 @@ const getOrderCancelledTemplate = (data: {
   </div>
 </body>
 </html>
-    `
-}
+    `;
+};
 
-const getOrdderConfirmTemplate = (data: { message: string; image:string; title?: string }) => {
-    const { message, image, title = "Order Confirmation" } = data
-    return `
+const getOrdderConfirmTemplate = (data: Order) => {
+  return `
     
 <!DOCTYPE html>
 <html lang="en">
@@ -2033,8 +2036,8 @@ const getOrdderConfirmTemplate = (data: { message: string; image:string; title?:
 <body>
   <div class="container">
     <div class="header">
-      <img src="https://via.placeholder.com/180x50" alt="Company Logo" class="logo">
-      <h1 style="font-size:40px " >Order Confirmation</h1>
+      <img src="https://res.cloudinary.com/dpudz7cci/image/upload/v1743888257/g7wjckwmdx67y6fd9edp.png" alt="Electrohub Logo" class="logo">
+      <h1 style="font-size:40px " >Order Placed</h1>
     </div>
     
     <div class="content-wrapper">
@@ -2046,11 +2049,11 @@ const getOrdderConfirmTemplate = (data: { message: string; image:string; title?:
         <div class="order-meta">
           <div class="order-meta-item">
             <strong>Order ID</strong>
-            <span>ORD-12345678</span>
+            <span>ORD-${data.id}</span>
           </div>
           <div class="order-meta-item">
             <strong>Order Date</strong>
-            <span>May 4, 2025</span>
+            <span>${formatDate(data.createdAt)}</span>
           </div>
           <div class="order-meta-item">
             <strong>Payment</strong>
@@ -2058,7 +2061,9 @@ const getOrdderConfirmTemplate = (data: { message: string; image:string; title?:
           </div>
         </div>
         
-        <a href="#" class="button">Track Your Order</a>
+        <a href="${process.env.FRONTEND_URL}/user/orders/${
+    data.orderItems[0].id
+  }" class="button">Track Your Order</a>
       </div>
       <div class="order-details">
         <h3 class="section-title">Order Details</h3>
@@ -2072,52 +2077,44 @@ const getOrdderConfirmTemplate = (data: { message: string; image:string; title?:
             </tr>
           </thead>
           <tbody>
+          ${data.orderItems.map((orderItem) => {
+            return ` 
             <tr>
-              <td class="item-image"><img src="https://via.placeholder.com/50" alt="Product 1"></td>
+              <td class="item-image">
+              <img src="${orderItem.product.images[0].url}" alt="${
+              orderItem.product.name
+            }"></td>
               <td>
-                <span class="product-name">Premium Wireless Headphones</span>
-                <span class="product-variant">Color: Black | Model: XY-200</span>
+                <span class="product-name">${orderItem.product.name}</span>
+                <span class="product-variant">${
+                  orderItem.product.description
+                }</span>
               </td>
-              <td>1</td>
-              <td class="product-price">$129.99</td>
-            </tr>
-            <tr>
-              <td class="item-image"><img src="https://via.placeholder.com/50" alt="Product 2"></td>
-              <td>
-                <span class="product-name">Smartphone Fast Charger</span>
-                <span class="product-variant">20W | Type-C | White</span>
-              </td>
-              <td>2</td>
-              <td class="product-price">$24.99</td>
-            </tr>
-            <tr>
-              <td class="item-image"><img src="https://via.placeholder.com/50" alt="Product 3"></td>
-              <td>
-                <span class="product-name">Protective Phone Case</span>
-                <span class="product-variant">iPhone 14 Pro | Clear</span>
-              </td>
-              <td>1</td>
-              <td class="product-price">$19.99</td>
-            </tr>
+              <td>${orderItem.quantity}</td>
+              <td class="product-price">₹${formatPrice(
+                orderItem.product.price * 1 -
+                  (orderItem.product.offerPercentage / 100) *
+                    orderItem.product.price
+              )}</td>
+            </tr>`;
+          })}
           </tbody>
         </table>
         
         <table class="summary-table">
           <tr>
             <td style="width: 70%; text-align: start;">Subtotal:</td>
-            <td style="width: 30%; text-align: right;">$199.96</td>
+            <td style="width: 30%; text-align: right;">₹${formatPrice(
+              data.total
+            )}</td>
           </tr>
           <tr>
             <td style="text-align: start;">Shipping:</td>
-            <td style="text-align: right;">$5.99</td>
-          </tr>
-          <tr>
-            <td style="text-align: start;">Tax:</td>
-            <td style="text-align: right;">$16.00</td>
+            <td style="text-align: right;">Free</td>
           </tr>
           <tr class="total-row">
             <td style="text-align: start;">Total:</td>
-            <td style="text-align: right;">$221.95</td>
+            <td style="text-align: right;">₹${formatPrice(data.total)}</td>
           </tr>
         </table>
       </div>
@@ -2128,36 +2125,8 @@ const getOrdderConfirmTemplate = (data: { message: string; image:string; title?:
             <span class="address-icon">✓</span>
             Shipping Address
           </div>
-          <p><strong>John Doe</strong></p>
-          <p>123 Main Street</p>
-          <p>Apt 4B</p>
-          <p>New York, NY 10001</p>
-          <p>United States</p>
-        </div>
-        
-        <div class="address-box">
-          <div class="address-title">
-            <span class="address-icon">✓</span>
-            Billing Address
-          </div>
-          <p><strong>John Doe</strong></p>
-          <p>123 Main Street</p>
-          <p>Apt 4B</p>
-          <p>New York, NY 10001</p>
-          <p>United States</p>
-        </div>
-      </div>
-      
-      <div class="payment-info">
-        <h3 class="section-title">Payment Information</h3>
-        <div class="payment-method">
-          <div class="payment-icon">
-            <span>VISA</span>
-          </div>
-          <div>
-            <div><strong>Visa</strong> ending in ****1234</div>
-            <div style="font-size: 13px; color: #666;">Expiry: 09/27</div>
-          </div>
+          <p><strong>${data.user.name}</strong></p>
+          <p>${data.user.address}</p>
         </div>
       </div>
       
@@ -2167,8 +2136,6 @@ const getOrdderConfirmTemplate = (data: { message: string; image:string; title?:
         <div class="promo-code">WELCOME15</div>
         <p>Valid for 30 days. Minimum purchase $50.</p>
       </div>
-      
-
       
       <div class="help-section">
         <h3 class="section-title">Need Help?</h3>
@@ -2192,7 +2159,6 @@ const getOrdderConfirmTemplate = (data: { message: string; image:string; title?:
         </div>
       </div>
     </div>
-    
     <div class="footer">
       <div class="social-links">
         <a href="#" class="social-link">f</a>
@@ -2228,11 +2194,16 @@ const getOrdderConfirmTemplate = (data: { message: string; image:string; title?:
   </div>
 </body>
 </html>
-`}
+`;
+};
 
-const getOrderDeliveredTemplate = (data: { message: string; image:string; title?: string }) => {
-    const { message, image, title = "Order Delivered" } = data
-    return `
+const getOrderDeliveredTemplate = (data: {
+  message: string;
+  image: string;
+  title?: string;
+}) => {
+  const { message, image, title = "Order Delivered" } = data;
+  return `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -2905,12 +2876,16 @@ const getOrderDeliveredTemplate = (data: { message: string; image:string; title?
     </div>
   </div>
 </body>
-</html>`
-}
+</html>`;
+};
 
-const getOrderProcessingTemplate = (data: { message: string; image:string; title?: string }) => {
-    const { message, image, title = "Order Processing" } = data 
-    return `
+const getOrderProcessingTemplate = (data: {
+  message: string;
+  image: string;
+  title?: string;
+}) => {
+  const { message, image, title = "Order Processing" } = data;
+  return `
     <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -3630,12 +3605,16 @@ const getOrderProcessingTemplate = (data: { message: string; image:string; title
     </div>
   </div>
 </body>
-</html>`
-}
+</html>`;
+};
 
-const getOrderShippedTemplate = (data: { message: string; image:string; title?: string }) => {
-    const { message, image, title = "Order Shipped" } = data
-    return `
+const getOrderShippedTemplate = (data: {
+  message: string;
+  image: string;
+  title?: string;
+}) => {
+  const { message, image, title = "Order Shipped" } = data;
+  return `
     <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -4315,13 +4294,14 @@ const getOrderShippedTemplate = (data: { message: string; image:string; title?: 
     </div>
   </div>
 </body>
-</html>`
-}
+</html>`;
+};
 
-export  { getInfoTemplate, 
-          getOrderCancelledTemplate,
-          getOrdderConfirmTemplate, 
-          getOrderDeliveredTemplate, 
-          getOrderProcessingTemplate, 
-          getOrderShippedTemplate  
-        };
+export {
+  getInfoTemplate,
+  getOrderCancelledTemplate,
+  getOrdderConfirmTemplate,
+  getOrderDeliveredTemplate,
+  getOrderProcessingTemplate,
+  getOrderShippedTemplate,
+};
