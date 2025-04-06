@@ -10,7 +10,7 @@ export interface Review {
   }
   
   export interface User {
-    userId: number;
+    id: number;
     name: string;
     pfp?: string;
     email?: string;

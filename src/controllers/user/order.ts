@@ -295,15 +295,22 @@ async function updateOrderStatus(req: Request, res: Response) {
       return;
     }
 
-    await db.orderItem.update({
+    const updatedOrderItem = await db.orderItem.update({
       where: {
         id: orderItem.id,
       },
       data: {
         status: status as OrderStatus,
       },
+      include: {
+        product: {
+          include: {
+            images: true,
+          },
+        },
+      },
     });
-    res.status(200).json({});
+    res.status(200).json({ order: updatedOrderItem });
     return;
   } catch (error: any) {
     console.log("ERROR_WHILE_UPDATING_ORDER_STATUS", error);

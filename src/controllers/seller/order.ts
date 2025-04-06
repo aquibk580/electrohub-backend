@@ -7,7 +7,7 @@ import { startOfDay, subDays } from "date-fns";
 async function getAllOrdersData(req: Request, res: Response) {
   try {
     const sellerId = Number.parseInt((req.user as UserPayload).id, 10);
-    
+
     if (isNaN(sellerId)) {
       res.status(400).json({ error: "Invalid or missing seller ID" });
       return;
@@ -82,8 +82,32 @@ async function updateOrderStatus(req: Request, res: Response) {
       data: {
         status: status as OrderStatus,
       },
+      include: {
+        product: {
+          include: {
+            images: true,
+          },
+        },
+      },
     });
-    res.status(200).json({ status: updatedOrderItem.status });
+
+    const order = await db.order.findUnique({
+      where: {
+        id: orderItem.orderId,
+      },
+      include: {
+        user: true,
+      },
+    });
+
+    if (!order || !order.user) {
+      res.status(400).json({ error: "Order or user not found" });
+      return;
+    }
+
+    const user = order.user;
+
+    res.status(200).json({ order: updatedOrderItem, user });
     return;
   } catch (error: any) {
     console.log("ERROR_WHILE_UPDATING_ORDER_STATUS", error);

@@ -1,167 +1,63 @@
 import nodemailer from "nodemailer";
-import { Order } from "../../types/entityTypes.js";
+import { Order, OrderItem, User } from "../../types/entityTypes.js";
 import dotenv from "dotenv";
 dotenv.config();
 
 import {
-  getInfoTemplate,
   getOrderCancelledTemplate,
   getOrderDeliveredTemplate,
-  getOrderProcessingTemplate,
+  getOrderReturnedTemplate,
   getOrderShippedTemplate,
   getOrdderConfirmTemplate,
 } from "./Mail-Template.js";
 
-// Define types for the order data
-
-// Email templates
-const getSuccessTemplate = (data: {
-  message: string;
-  image?: string;
-  title?: string;
-}) => {
-  const { message, image, title = "Success!" } = data;
-
-  return `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <style>
-        body {
-          font-family: Arial, sans-serif;
-          line-height: 1.6;
-          color: #333;
-          max-width: 600px;
-          margin: 0 auto;
-        }
-        .container {
-          border: 1px solid #e0e0e0;
-          border-radius: 5px;
-          padding: 20px;
-          margin-top: 20px;
-        }
-        .header {
-          background-color: #4CAF50;
-          color: white;
-          padding: 10px 20px;
-          border-radius: 5px 5px 0 0;
-          margin: -20px -20px 20px;
-        }
-        .content {
-          padding: 0 20px;
-        }
-        .footer {
-          margin-top: 30px;
-          font-size: 12px;
-          color: #777;
-          text-align: center;
-          border-top: 1px solid #e0e0e0;
-          padding-top: 20px;
-        }
-        img {
-          max-width: 100%;
-          height: auto;
-          margin: 15px 0;
-        }
-      </style>
-    </head>
-    <body>
-      <div class="container">
-        <div class="header">
-          <h2>${title}</h2>
-        </div>
-        <div class="content">
-          ${message.replace(/\n/g, "<br>")}
-          ${image ? `<img src="${image}" alt="Success Image">` : ""}
-        </div>
-        <div class="footer">
-          <p>Thank you for using our service!</p>
-        </div>
-      </div>
-    </body>
-    </html>
-  `;
+// Refined union types
+type OrderEmailData = {
+  type: "OrderConfirmed";
+  order: Order;
 };
 
-const getErrorTemplate = (data: {
-  message: string;
-  image?: string;
-  title?: string;
-}) => {
-  const { message, image, title = "Error Notification" } = data;
-
-  return `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <style>
-        body {
-          font-family: Arial, sans-serif;
-          line-height: 1.6;
-          color: #333;
-          max-width: 600px;
-          margin: 0 auto;
-        }
-        .container {
-          border: 1px solid #e0e0e0;
-          border-radius: 5px;
-          padding: 20px;
-          margin-top: 20px;
-        }
-        .header {
-          background-color: #f44336;
-          color: white;
-          padding: 10px 20px;
-          border-radius: 5px 5px 0 0;
-          margin: -20px -20px 20px;
-        }
-        .content {
-          padding: 0 20px;
-        }
-        .footer {
-          margin-top: 30px;
-          font-size: 12px;
-          color: #777;
-          text-align: center;
-          border-top: 1px solid #e0e0e0;
-          padding-top: 20px;
-        }
-        img {
-          max-width: 100%;
-          height: auto;
-          margin: 15px 0;
-        }
-      </style>
-    </head>
-    <body>
-      <div class="container">
-        <div class="header">
-          <h2>${title}</h2>
-        </div>
-        <div class="content">
-          ${message.replace(/\n/g, "<br>")}
-          ${image ? `<img src="${image}" alt="Error Image">` : ""}
-        </div>
-        <div class="footer">
-          <p>If you need assistance, please contact support.</p>
-        </div>
-      </div>
-    </body>
-    </html>
-  `;
+type ItemUserEmailData = {
+  type: "Cancelled" | "Returned" | "Shipped" | "Delivered";
+  order: OrderItem;
+  user: User;
 };
 
-export async function sendEmail(data: Order & { type: string }) {
+type EmailData = OrderEmailData | ItemUserEmailData;
+
+export async function sendEmail(data: EmailData) {
   try {
-    const to = data.user.email;
-    const subject = "Order Placed";
+    let to;
+    let htmlContent;
+    let subject;
 
-    // Validate inputs
-    if (!to || !subject) {
-      return { success: false, error: "Recipient and subject are required" };
+    if (data.type === "OrderConfirmed") {
+      to = data.order.user.email;
+      htmlContent = getOrdderConfirmTemplate(data.order);
+      subject = "Order Confirmed Successfully";
+    } else {
+      to = data.user.email;
+
+      switch (data.type) {
+        case "Cancelled":
+          htmlContent = getOrderCancelledTemplate({ order: data.order, user: data.user });
+          subject = "Order Cancelled";
+          break;
+        case "Returned":
+          htmlContent = getOrderReturnedTemplate({ order: data.order, user: data.user });
+          subject = "Order Returned";
+          break;
+        case "Shipped":
+          htmlContent = getOrderShippedTemplate({ order: data.order, user: data.user });
+          subject = "Order Shipped";
+          break;
+        case "Delivered":
+          htmlContent = getOrderDeliveredTemplate({ order: data.order, user: data.user });
+          subject = "Order Delivered";
+          break;
+      }
     }
 
-    // Create a transporter
     const transporter = nodemailer.createTransport({
       service: "gmail",
       auth: {
@@ -169,50 +65,12 @@ export async function sendEmail(data: Order & { type: string }) {
         pass: process.env.GMAIL_APP_PASSWORD,
       },
     });
+    console.log(to)
 
-    // Determine HTML content based on type
-    let htmlContent;
-    let message;
-    console.log(data);
-    console.log(data.type);
-    if (data.type === "OrderConfirmed") {
-      htmlContent = getOrdderConfirmTemplate(data);
-      message = "Order Confirmed";
-    } else {
-      message = "Unknown";
-    }
-    // if (data.type === data.orderItems[0].status) {
-    //   htmlContent = getSuccessTemplate({
-    //     message,
-    //     image,
-    //     title: templateData?.title,
-    //   });
-    // } else if (type === "error") {
-    //   htmlContent = getErrorTemplate({
-    //     message,
-    //     image,
-    //     title: templateData?.title,
-    //   });
-    // } else if (type === "info") {
-    //   htmlContent = getInfoTemplate({
-    //     message,
-    //     image,
-    //     title: templateData?.title,
-    //   });
-    // } else if (type === "cancelled") {
-    //   htmlContent = getOrderCancelledTemplate({
-    //     message,
-    //     image,
-    //     title: templateData?.title,
-    //   });
-    // }
-
-    // Send email
     await transporter.sendMail({
       from: process.env.GMAIL_USER,
       to,
       subject,
-      text: message,
       html: htmlContent,
     });
 
@@ -226,45 +84,3 @@ export async function sendEmail(data: Order & { type: string }) {
   }
 }
 
-// import nodemailer from "nodemailer";
-// type EmailData = {
-//     to: string;
-//     subject: string;
-//     message: string;
-// };
-// export async function sendEmail(data: EmailData) {
-//     try {
-//         const { to, subject, message } = data;
-
-//         // Validate inputs
-//         if (!to || !subject || !message) {
-//             return { success: false, error: "All fields are required" };
-//         }
-
-//         // Create a transporter
-//         const transporter = nodemailer.createTransport({
-//             service: "gmail",
-//             auth: {
-//                 user: process.env.GMAIL_USER,
-//                 pass: process.env.GMAIL_APP_PASSWORD,
-//             },
-//         });
-
-//         // Send email
-//         await transporter.sendMail({
-//             from: process.env.GMAIL_USER,
-//             to,
-//             subject,
-//             text: message,
-//             html: message.replace(/\n/g, "<br>"),
-//         });
-
-//         return { success: true };
-//     } catch (error) {
-//         console.error("Error sending email:", error);
-//         return {
-//             success: false,
-//             error: error instanceof Error ? error.message : "Failed to send email",
-//         };
-//     }
-// }
