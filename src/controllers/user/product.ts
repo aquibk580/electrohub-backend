@@ -25,28 +25,29 @@ interface Image {
 async function getAllProducts(req: Request, res: Response) {
   try {
     const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 20;
+    const limit = parseInt(req.query.limit as string) || 12;
     const category = req.query.category as string | undefined;
     const skip = (page - 1) * limit;
 
-    const whereClause =
-      category && category !== "All" ? { categoryName: category } : {};
+    const whereClause: any = {
+      status: {
+        in: ["OutOfStock", "Active"],
+      },
+    };
+
+    if (category && category !== "All") {
+      whereClause.categoryName = category;
+    }
 
     const products = await db.product.findMany({
-      where: whereClause && {
-        status: {
-          in: ["OutOfStock", "Active"],
-        },
-      },
+      where: whereClause,
       orderBy: { createdAt: "desc" },
       include: { images: true, productInfo: true, reviews: true },
       skip,
       take: limit,
     });
 
-    const totalProducts = await db.product.count({ where: whereClause });
-
-    res.status(200).json({ products, total: totalProducts });
+    res.status(200).json({ products });
   } catch (error: any) {
     console.error("ERROR_WHILE_GETTING_PRODUCT", error);
     res
@@ -389,7 +390,6 @@ async function getDeal(req: Request, res: Response) {
       res.status(404).json({ error: "Product not found" });
       return;
     }
-
 
     res.status(200).json(product);
     return;
