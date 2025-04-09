@@ -20,7 +20,7 @@ async function getAllSellers(req: Request, res: Response) {
   try {
     const sellers: Array<Seller> = await db.seller.findMany({
       orderBy: {
-        createdAt: "asc",
+        createdAt: "desc",
       },
       include: {
         _count: {

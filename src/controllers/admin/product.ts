@@ -8,6 +8,7 @@ async function getAllProducts(req: Request, res: Response) {
       include: {
         images: true,
       },
+      orderBy: { createdAt:"desc" },
     });
 
     if (products.length === 0) {

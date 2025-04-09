@@ -5,7 +5,7 @@ async function getAllUsers(req: Request, res: Response) {
   try {
     const users = await db.user.findMany({
       orderBy: {
-        createdAt: "asc",
+        createdAt: "desc",
       },
     });
 

@@ -25,6 +25,7 @@ async function getAllOrdersData(req: Request, res: Response) {
       include: {
         user: true,
         orderItems: {
+          orderBy: { createdAt: "desc" },
           include: {
             product: {
               include: { seller: true, images: true, productInfo: true },

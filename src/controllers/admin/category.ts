@@ -76,7 +76,7 @@ async function getAllCategories(req: Request, res: Response) {
   try {
     const category: Array<Category> = await db.category.findMany({
       orderBy: {
-        createdAt: "asc",
+        createdAt: "desc",
       },
     });
 

@@ -181,6 +181,7 @@ async function getAllProducts(req: Request, res: Response) {
 
     const products: Array<ProductDB> = await db.product.findMany({
       where: { sellerId: SellerId },
+      orderBy: { createdAt:"desc" },
       include: {
         images: true,
         reviews: true,
