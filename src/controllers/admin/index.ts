@@ -1,6 +1,12 @@
 import { Request, Response } from "express";
 import { db } from "../../lib/db.js";
-import { startOfMonth, endOfMonth, startOfDay, subDays } from "date-fns";
+import {
+  startOfMonth,
+  endOfMonth,
+  startOfDay,
+  subDays,
+  endOfDay,
+} from "date-fns";
 
 type OrderItemWithProduct = {
   id: string;
@@ -8,13 +14,25 @@ type OrderItemWithProduct = {
   offerPercentage: number | null;
 };
 
+let cachedStats: any = null;
+let cacheTimestamp: number = 0;
+const CACHE_DURATION = 3 * 60 * 60 * 1000; // 3 hours to revalidate
+
 export async function getSalesStatistics(req: Request, res: Response) {
   try {
+    const now = Date.now();
+
+    // Return cached data if valid
+    if (cachedStats && now - cacheTimestamp < CACHE_DURATION) {
+      res.status(200).json(cachedStats);
+      return;
+    }
+
+    // Otherwise calculate fresh stats
     const currentDate = new Date();
     const firstDayOfMonth = startOfMonth(currentDate);
     const lastDayOfMonth = endOfMonth(currentDate);
 
-    // Basic counts in parallel
     const [orders, users, sellers, monthlyOrders] = await Promise.all([
       db.orderItem.count(),
       db.user.count(),
@@ -29,69 +47,69 @@ export async function getSalesStatistics(req: Request, res: Response) {
       }),
     ]);
 
-    // Heavy query: Fetch only needed fields from orderItems with timeout
     const allOrderItems = await db.$queryRawUnsafe<OrderItemWithProduct[]>(`
       SELECT oi."id", p."price", p."offerPercentage"
       FROM "OrderItem" oi
       JOIN "Product" p ON p."id" = oi."productId"
     `);
 
-    const sales = allOrderItems.reduce((acc: number, item: any) => {
-      const price = item.price;
+    const sales = allOrderItems.reduce((acc, item) => {
       const discount = item.offerPercentage || 0;
-      const finalPrice = price * (1 - discount / 100);
+      const finalPrice = item.price * (1 - discount / 100);
       return acc + finalPrice;
     }, 0);
 
-    // Weekly Sales: Query one day at a time, sequentially to avoid overload
-    const last7DaysSales: { date: Date; sales: number }[] = [];
-
-    for (let i = 6; i >= 0; i--) {
+    const last7DaysSales = [];
+    for (let i = 0; i < 7; i++) {
       const day = subDays(currentDate, i);
-      const start = startOfDay(day);
-      const end = subDays(start, -1);
+      const startOfDayDate = startOfDay(day);
+      const endOfDayDate = endOfDay(day);
 
-      const dayOrders = await db.orderItem.findMany({
+      const orders = await db.orderItem.findMany({
         where: {
           createdAt: {
-            gte: start,
-            lt: end,
+            gte: startOfDayDate,
+            lte: endOfDayDate,
           },
         },
-        select: {
-          product: {
-            select: {
-              price: true,
-              offerPercentage: true,
-            },
-          },
+        include: {
+          product: true,
         },
       });
 
-      const totalSales = dayOrders.reduce((acc, item) => {
-        if (!item.product) return acc;
-        const price = item.product.price;
-        const discount = item.product.offerPercentage || 0;
-        return acc + price * (1 - discount / 100);
+      const totalSales = orders.reduce((acc, order) => {
+        if (!order.product) return acc;
+        return (
+          acc +
+          order.product.price * (1 - (order.product.offerPercentage ?? 0) / 100)
+        );
       }, 0);
 
-      last7DaysSales.push({ date: start, sales: totalSales });
+      last7DaysSales.push({ date: day, sales: totalSales });
     }
 
-    res.status(200).json({
+    const result = {
       sales,
       users,
       sellers,
       orders,
       monthlyOrders,
-      weeklySales: last7DaysSales,
-    });
+      weeklySales: last7DaysSales.reverse(),
+    };
+
+    // Cache the result
+    cachedStats = result;
+    cacheTimestamp = now;
+
+    res.status(200).json(result);
+    return;
   } catch (error: any) {
     console.error("ERROR_WHILE_GETTING_SALES_DATA", error);
     res.status(500).json({
       error: "Internal Server Error",
       details: error.message,
     });
+    return;
   }
 }
 
