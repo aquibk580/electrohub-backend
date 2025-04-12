@@ -1,6 +1,12 @@
 import { Request, Response } from "express";
 import { db } from "../../lib/db.js";
-import { startOfMonth, endOfMonth, subDays, startOfDay } from "date-fns";
+import { startOfMonth, endOfMonth, startOfDay, subDays } from "date-fns";
+
+type OrderItemWithProduct = {
+  id: string;
+  price: number;
+  offerPercentage: number | null;
+};
 
 export async function getSalesStatistics(req: Request, res: Response) {
   try {
@@ -8,88 +14,84 @@ export async function getSalesStatistics(req: Request, res: Response) {
     const firstDayOfMonth = startOfMonth(currentDate);
     const lastDayOfMonth = endOfMonth(currentDate);
 
-    const orders = await db.orderItem.count({});
-    const users = await db.user.count({});
-    const sellers = await db.seller.count({});
-    const monthlyOrders = await db.orderItem.count({
-      where: {
-        createdAt: {
-          gte: firstDayOfMonth,
-          lte: lastDayOfMonth,
+    // Basic counts in parallel
+    const [orders, users, sellers, monthlyOrders] = await Promise.all([
+      db.orderItem.count(),
+      db.user.count(),
+      db.seller.count(),
+      db.orderItem.count({
+        where: {
+          createdAt: {
+            gte: firstDayOfMonth,
+            lte: lastDayOfMonth,
+          },
         },
-      },
-    });
-    const products = await db.product.findMany({
-      include: {
-        orderItems: true,
-      },
-    });
+      }),
+    ]);
 
-    if (products.length === 0) {
-      res.status(200).json({ message: "No products available" });
-      return;
-    }
-    const sales = products.reduce(
-      (acc, product) =>
-        acc +
-        product.orderItems.length *
-          product.price *
-          (1 - (product.offerPercentage ? product.offerPercentage / 100 : 0)),
-      0
-    );
+    // Heavy query: Fetch only needed fields from orderItems with timeout
+    const allOrderItems = await db.$queryRawUnsafe<OrderItemWithProduct[]>(`
+      SELECT oi."id", p."price", p."offerPercentage"
+      FROM "OrderItem" oi
+      JOIN "Product" p ON p."id" = oi."productId"
+    `);
 
-    const last7DaysSales = await Promise.all(
-      [...Array(7)].map(async (_, i) => {
-        const day = subDays(currentDate, i);
-        const startOfDayDate = startOfDay(day);
+    const sales = allOrderItems.reduce((acc: number, item: any) => {
+      const price = item.price;
+      const discount = item.offerPercentage || 0;
+      const finalPrice = price * (1 - discount / 100);
+      return acc + finalPrice;
+    }, 0);
 
-        const orders = await db.orderItem.findMany({
-          where: {
-            createdAt: {
-              gte: startOfDayDate,
-              lt: subDays(startOfDayDate, -1),
+    // Weekly Sales: Query one day at a time, sequentially to avoid overload
+    const last7DaysSales: { date: Date; sales: number }[] = [];
+
+    for (let i = 6; i >= 0; i--) {
+      const day = subDays(currentDate, i);
+      const start = startOfDay(day);
+      const end = subDays(start, -1);
+
+      const dayOrders = await db.orderItem.findMany({
+        where: {
+          createdAt: {
+            gte: start,
+            lt: end,
+          },
+        },
+        select: {
+          product: {
+            select: {
+              price: true,
+              offerPercentage: true,
             },
           },
-          include: {
-            product: true,
-          },
-        });
+        },
+      });
 
-        const totalSales = orders.reduce(
-          (acc, order) => {
-            if (!order.product) return 0;
-            return (
-              acc +
-              order?.product.price *
-                (1 -
-                  (order!.product.offerPercentage
-                    ? order!.product.offerPercentage / 100
-                    : 0))
-            );
-          },
+      const totalSales = dayOrders.reduce((acc, item) => {
+        if (!item.product) return acc;
+        const price = item.product.price;
+        const discount = item.product.offerPercentage || 0;
+        return acc + price * (1 - discount / 100);
+      }, 0);
 
-          0
-        );
+      last7DaysSales.push({ date: start, sales: totalSales });
+    }
 
-        return {
-          date: day,
-          sales: totalSales,
-        };
-      })
-    );
-
-    const weeklySales = last7DaysSales.reverse();
-
-    res
-      .status(200)
-      .json({ sales, users, sellers, orders, monthlyOrders, weeklySales });
-    return;
+    res.status(200).json({
+      sales,
+      users,
+      sellers,
+      orders,
+      monthlyOrders,
+      weeklySales: last7DaysSales,
+    });
   } catch (error: any) {
-    console.log("ERROR_WHILE_GETTING_SALES_DATA");
-    res
-      .status(500)
-      .json({ error: "Internal Server Error", details: error.message });
-    return;
+    console.error("ERROR_WHILE_GETTING_SALES_DATA", error);
+    res.status(500).json({
+      error: "Internal Server Error",
+      details: error.message,
+    });
   }
 }
 
