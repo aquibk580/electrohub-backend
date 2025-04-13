@@ -22,7 +22,7 @@ const port = 8000;
 const app: Express = express();
 const limiter = rateLimit({
   windowMs: 2 * 60 * 1000, // 2 minutes
-  max: 200, // limit each IP to 100 requests per windowMs
+  max: 200, // limit each IP to 200 requests per windowMs
   message: "Too many requests from this IP, please try again later.",
 });
 
@@ -31,7 +31,7 @@ app.use(morgan("dev"));
 app.use(express.json()); 
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
-app.use(cors({ origin: "http://localhost:5173", credentials: true }));
+app.use(cors({ origin: process.env.FRONTEND_URL, credentials: true }));
 app.use(passport.initialize());
 app.use(limiter);
 

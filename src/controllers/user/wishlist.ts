@@ -91,7 +91,19 @@ async function getAllProductsFromWishlist(req: Request, res: Response) {
         WishlistProduct: {
           include: {
             product: {
-              include: { images: true },
+              select: {
+                id: true,
+                name: true,
+                price: true,
+                offerPercentage: true,
+                status: true,
+                images: {
+                  take: 1,
+                  orderBy: {
+                    id: "asc",
+                  },
+                },
+              },
             },
           },
         },

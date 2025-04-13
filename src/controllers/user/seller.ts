@@ -44,7 +44,12 @@ async function getSingleSeller(req: Request, res: Response) {
       include: {
         products: {
           include: {
-            images: true,
+            images: {
+              take: 1,
+              orderBy: {
+                id: "asc",
+              },
+            },
             reviews: true,
           },
         },

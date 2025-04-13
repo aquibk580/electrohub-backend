@@ -51,7 +51,14 @@ async function getAllCartItems(req: Request, res: Response) {
 
     const products = await db.product.findMany({
       where: { id: { in: productIds } },
-      include: { images: true, productInfo: true, reviews: true },
+      include: {
+        images: {
+          take: 1,
+          orderBy: {
+            id: "asc",
+          },
+        },
+      },
     });
 
     const productsWithCartItemId = products.map((product) => {

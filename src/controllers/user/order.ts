@@ -197,8 +197,18 @@ async function getAllOrders(req: Request, res: Response) {
           include: {
             product: {
               include: {
-                seller: true,
-                images: true,
+                seller: {
+                  select: {
+                    id: true,
+                    name: true,
+                  },
+                },
+                images: {
+                  take: 1,
+                  orderBy: {
+                    id: "asc",
+                  },
+                },
               },
             },
           },

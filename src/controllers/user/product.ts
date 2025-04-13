@@ -42,7 +42,15 @@ async function getAllProducts(req: Request, res: Response) {
     const products = await db.product.findMany({
       where: whereClause,
       orderBy: { createdAt: "desc" },
-      include: { images: true, productInfo: true, reviews: true },
+      include: {
+        reviews: true,
+        images: {
+          take: 1,
+          orderBy: {
+            id: "asc",
+          },
+        },
+      },
       skip,
       take: limit,
     });
@@ -173,8 +181,15 @@ async function getUserReviews(req: Request, res: Response) {
       },
       include: {
         product: {
-          include: {
-            images: true,
+          select: {
+            id: true,
+            name: true,
+            images: {
+              take: 1,
+              orderBy: {
+                id: "asc",
+              },
+            },
           },
         },
       },
