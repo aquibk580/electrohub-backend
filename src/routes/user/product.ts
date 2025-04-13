@@ -8,7 +8,6 @@ import {
   sendReview,
   updateReview,
   searchProducts,
-  getDeal,
 } from "../../controllers/user/product.js";
 import { isLoggedIn } from "../../middlewares/auth.js";
 
@@ -19,9 +18,6 @@ router.get("/", getAllProducts);
 
 // Search products
 router.get("/search", searchProducts);
-
-// Get deal product
-router.get("/deal", getDeal);
 
 // Get single Product
 router.get("/:productId", getSingleProduct);

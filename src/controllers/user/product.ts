@@ -391,32 +391,6 @@ async function searchProducts(req: Request, res: Response) {
   }
 }
 
-async function getDeal(req: Request, res: Response) {
-  try {
-    const product = await db.product.findFirst({
-      orderBy: {
-        offerPercentage: "desc",
-      },
-      include: {
-        images: true,
-      },
-    });
-    if (!product) {
-      res.status(404).json({ error: "Product not found" });
-      return;
-    }
-
-    res.status(200).json(product);
-    return;
-  } catch (error: any) {
-    console.log("ERROR_WHILE_GETTING_DEAL+PRODUCT", error);
-    res
-      .status(500)
-      .json({ error: "Internal Server Error", details: error.message });
-    return;
-  }
-}
-
 export {
   getAllProducts,
   sendReview,
@@ -426,5 +400,4 @@ export {
   getUserReviews,
   getRelatedProducts,
   searchProducts,
-  getDeal,
 };
