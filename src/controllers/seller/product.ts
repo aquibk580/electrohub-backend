@@ -52,15 +52,6 @@ interface ProductDB {
   categoryName: string;
 }
 
-interface Product {
-  name: string;
-  description: string;
-  price: string;
-  offerPercentage?: string | null;
-  stock: string;
-  categoryName: string;
-}
-
 interface Image {
   url: string;
   productId: number;
@@ -181,7 +172,7 @@ async function getAllProducts(req: Request, res: Response) {
 
     const products: Array<ProductDB> = await db.product.findMany({
       where: { sellerId: SellerId },
-      orderBy: { createdAt:"desc" },
+      orderBy: { createdAt: "desc" },
       include: {
         images: true,
         reviews: true,
@@ -418,18 +409,11 @@ async function updateProduct(req: Request, res: Response) {
       Object.entries(productData).filter(([_, value]) => value !== undefined)
     );
 
-    // Check if the product is being restocked (status is not "OutOfStock")
-    if (
-      updatedProductData.status &&
-      updatedProductData.status !== "OutOfStock" &&
-      (!updatedProductData.stock || updatedProductData.stock === 0)
-    ) {
-      res.status(400).json({
-        error:
-          "Stock quantity must be greater than 0 when restocking a product.",
-        flag: "RestockError",
+    if (updatedProductData.stock === 0) {
+      await db.product.update({
+        where: { id: ProductId },
+        data: { status: "OutOfStock" },
       });
-      return;
     }
 
     const uploadedFiles = req.files as Express.Multer.File[];
