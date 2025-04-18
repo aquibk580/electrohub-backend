@@ -6,7 +6,6 @@ const router: Router = Router();
 router.post("/", async (req: Request, res: Response): Promise<any> => {
   try {
     const Data = req.body;
-    console.log(Data)
     const result = await sendEmail(Data);
     if (result.success) {
       res.json({ message: "Email sent successfully" });

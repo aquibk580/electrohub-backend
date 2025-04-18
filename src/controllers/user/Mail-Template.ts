@@ -442,7 +442,7 @@ const getOrderCancelledTemplate = (data: { order: OrderItem; user: User }) => {
           </div>
         </div>
         
-        <a href="http://localhost:5173/user/orders" class="button">View Order Details</a>
+        <a href="${process.env.FRONTEND_URL}/user/orders" class="button">View Order Details</a>
       </div>
       
       <div class="refund-info">
@@ -1856,7 +1856,7 @@ const getOrderDeliveredTemplate = (data: { order: OrderItem; user: User }) => {
           </div>
         </div>
         
-        <a href="http://localhost:5173/user/orders" class="button">View Order Details</a>
+        <a href="${process.env.FRONTEND_URL}/user/orders" class="button">View Order Details</a>
       </div>
       
       <div class="delivery-confirmation">
@@ -1933,7 +1933,7 @@ const getOrderDeliveredTemplate = (data: { order: OrderItem; user: User }) => {
           <a href="#" class="star">★</a>
           <a href="#" class="star">★</a>
         </div>
-        <a href="http://localhost:5173/user/orders" class="button">Write a Review</a>
+        <a href="${process.env.FRONTEND_URL}/user/orders" class="button">Write a Review</a>
       </div>
       
       <div class="promo-banner">
@@ -2546,7 +2546,7 @@ const getOrderReturnedTemplate = (data: { order: OrderItem; user: User }) => {
           </div>
         </div>
         
-        <a href="http://localhost:5173/user/orders" class="button">Track Return Status</a>
+        <a href="${process.env.FRONTEND_URL}/user/orders" class="button">Track Return Status</a>
       </div>
       
       <div class="return-instructions">

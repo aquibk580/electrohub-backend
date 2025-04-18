@@ -65,7 +65,6 @@ export async function sendEmail(data: EmailData) {
         pass: process.env.GMAIL_APP_PASSWORD,
       },
     });
-    console.log(to)
 
     await transporter.sendMail({
       from: process.env.GMAIL_USER,
