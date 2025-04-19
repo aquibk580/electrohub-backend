@@ -1,5 +1,4 @@
 import { Router } from "express";
-import { isAdminLoggedIn } from "../../../middlewares/admin/auth.js";
 import {
   createBannerCarousel,
   deleteBannerCarousel,

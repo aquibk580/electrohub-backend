@@ -226,8 +226,9 @@ async function deleteProduct(req: Request, res: Response) {
       return;
     }
 
-    if (product.images.length > 0) {
-      for (const image of product.images) {
+    if (product.images.length > 1) {
+      for (let i = 1; i < product.images.length; i++) {
+        const image = product.images[i];
         const imagePublicId = extractPublicId(image.url);
         if (imagePublicId) {
           await cloudinary.uploader.destroy(
@@ -237,9 +238,16 @@ async function deleteProduct(req: Request, res: Response) {
       }
     }
 
-    await db.productImage.deleteMany({
-      where: { productId: ProductId },
-    });
+    if (product.images.length > 1) {
+      const imagesToDelete = product.images.slice(1);
+      await db.productImage.deleteMany({
+        where: {
+          id: {
+            in: imagesToDelete.map((img) => img.id),
+          },
+        },
+      });
+    }
 
     await db.product.update({
       where: { id: ProductId },
