@@ -12,7 +12,7 @@ export const validateFile = (file: Express.Multer.File) => {
 
   if (!validTypes.includes(file.mimetype)) {
     throw new Error(
-      "Invalid file type. Only JPEG, PNG, JPG, and GIF are allowed"
+      "Invalid file type. Only JPEG, PNG, JPG, GIF, and WEBP are allowed"
     );
   }
 
@@ -23,14 +23,17 @@ export const validateFile = (file: Express.Multer.File) => {
   return true;
 };
 
-export const checkFileCount = (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
-  if (!req.files || (req.files as Express.Multer.File[]).length > 5) {
-    res.status(400).json({ message: "You can upload up to 5 files only." });
-    return;
+export const checkFileCount = (req: Request, res: Response, next: Function) => {
+  if (!req.files) {
+    return next();
   }
+
+  const files = req.files as Express.Multer.File[];
+  if (files.length > 5) {
+    return res
+      .status(400)
+      .json({ error: "You can upload up to 5 files only." });
+  }
+
   next();
 };

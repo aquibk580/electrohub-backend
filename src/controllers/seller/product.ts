@@ -384,15 +384,16 @@ const productUpdateSchema: ZodSchema = z.object({
 async function updateProduct(req: Request, res: Response) {
   try {
     const { productId } = req.params;
-    const ProductId = parseInt(productId, 10);
+    const productIdNum = Number.parseInt(productId, 10);
 
-    if (isNaN(ProductId)) {
+    if (isNaN(productIdNum)) {
       res.status(400).json({ error: "Invalid or missing product ID." });
       return;
     }
 
+    // Find the product to update
     const product = await db.product.findUnique({
-      where: { id: ProductId },
+      where: { id: productIdNum },
       include: { productInfo: true, images: true },
     });
 
@@ -401,93 +402,100 @@ async function updateProduct(req: Request, res: Response) {
       return;
     }
 
+    // Validate the request data
     const validatedData = await productUpdateSchema.parse(req.body);
-
     const { brand, details, categoryName, ...productData } = validatedData;
 
-    if (productData.stock !== undefined)
-      productData.stock = parseInt(productData.stock);
-    if (productData.price !== undefined)
-      productData.price = parseFloat(productData.price);
-    if (productData.offerPercentage !== undefined) {
-      productData.offerPercentage = parseInt(productData.offerPercentage);
+    // Parse numeric values
+    if (productData.stock !== undefined) {
+      productData.stock = Number.parseInt(productData.stock);
     }
 
+    if (productData.price !== undefined) {
+      productData.price = Number.parseFloat(productData.price);
+    }
+
+    if (productData.offerPercentage !== undefined) {
+      productData.offerPercentage = Number.parseInt(
+        productData.offerPercentage
+      );
+    }
+
+    // Filter out undefined values
     const updatedProductData = Object.fromEntries(
       Object.entries(productData).filter(([_, value]) => value !== undefined)
     );
 
+    // Handle stock status
     if (updatedProductData.stock === 0) {
-      await db.product.update({
-        where: { id: ProductId },
-        data: { status: "OutOfStock" },
-      });
+      updatedProductData.status = "OutOfStock";
     }
 
+    // Process uploaded images
     const uploadedFiles = req.files as Express.Multer.File[];
-    const newImageUrls = await Promise.all(
-      uploadedFiles.map(async (file) => {
-        validateFile(file);
-        return await uploadToCloudinary(
-          file.buffer,
-          process.env.PRODUCT_FOLDER!
-        );
-      })
-    );
+    const newImageUrls = [];
 
+    if (uploadedFiles && uploadedFiles.length > 0) {
+      // Process each uploaded file
+      for (const file of uploadedFiles) {
+        try {
+          validateFile(file);
+          const url = await uploadToCloudinary(
+            file.buffer,
+            process.env.PRODUCT_FOLDER!
+          );
+          newImageUrls.push(url);
+        } catch (error: any) {
+          res.status(400).json({ error: error.message });
+          return;
+        }
+      }
+    }
+
+    // Check total image count
     const totalImages = product.images.length + newImageUrls.length;
     if (totalImages < 3) {
       res.status(400).json({ error: "At least 3 images are required." });
       return;
     }
+
     if (totalImages > 5) {
       res.status(400).json({ error: "A maximum of 5 images is allowed." });
       return;
     }
 
-    await Promise.all(
-      newImageUrls.map(async (url) => {
-        await db.productImage.create({
-          data: {
-            url,
-            productId: ProductId,
-          },
-        });
-      })
-    );
-
-    let updatedProduct;
-    if (categoryName) {
-      updatedProduct = await db.product.update({
-        where: { id: ProductId },
+    // Create new image records
+    for (const url of newImageUrls) {
+      await db.productImage.create({
         data: {
-          ...updatedProductData,
-          category: { connect: { name: categoryName } },
-          productInfo: {
-            update: {
-              brand: brand || product.productInfo.brand,
-              details: JSON.parse(details) || product.productInfo.details,
-            },
-          },
+          url,
+          productId: productIdNum,
         },
-        include: { productInfo: true, images: true },
-      });
-    } else if (productData.status !== "OutOfStock") {
-    } else {
-      updatedProduct = await db.product.update({
-        where: { id: ProductId },
-        data: {
-          ...updatedProductData,
-          productInfo: {
-            update: {
-              brand: brand || product.productInfo.brand,
-              details: JSON.parse(details) || product.productInfo.details,
-            },
-          },
-        },
-        include: { productInfo: true, images: true },
       });
     }
+
+    // Prepare update data
+    const updateData: any = {
+      ...updatedProductData,
+      productInfo: {
+        update: {
+          brand: brand || product.productInfo.brand,
+          details: details ? JSON.parse(details) : product.productInfo.details,
+        },
+      },
+    };
+
+    // Add category connection if provided
+    if (categoryName) {
+      updateData.category = { connect: { name: categoryName } };
+    }
+
+    // Update the product
+    const updatedProduct = await db.product.update({
+      where: { id: productIdNum },
+      data: updateData,
+      include: { productInfo: true, images: true },
+    });
 
     res.status(200).json({
       message: "Product updated successfully.",
@@ -500,6 +508,7 @@ async function updateProduct(req: Request, res: Response) {
       error: "Internal server error",
       details: error.message,
     });
+    return;
   }
 }
 
@@ -507,8 +516,16 @@ async function updateProduct(req: Request, res: Response) {
 async function deleteProductImage(req: Request, res: Response) {
   try {
     const { imageId } = req.params;
+    const imageIdNum = Number.parseInt(imageId, 10);
+
+    if (isNaN(imageIdNum)) {
+      res.status(400).json({ error: "Invalid image ID." });
+      return;
+    }
+
+    // Find the image
     const image = await db.productImage.findUnique({
-      where: { id: parseInt(imageId, 10) },
+      where: { id: imageIdNum },
     });
 
     if (!image) {
@@ -516,6 +533,7 @@ async function deleteProductImage(req: Request, res: Response) {
       return;
     }
 
+    // Check if removing this image would leave the product with fewer than 3 images
     const productImages = await db.productImage.findMany({
       where: { productId: image.productId },
     });
@@ -528,11 +546,18 @@ async function deleteProductImage(req: Request, res: Response) {
       return;
     }
 
-    const imagePublicId = extractPublicId(image.url);
-    await cloudinary.uploader.destroy(
-      `${process.env.PRODUCT_FOLDER}/${imagePublicId}`
-    );
+    // Delete the image from Cloudinary
+    try {
+      const imagePublicId = extractPublicId(image.url);
+      await cloudinary.uploader.destroy(
+        `${process.env.PRODUCT_FOLDER}/${imagePublicId}`
+      );
+    } catch (cloudinaryError) {
+      console.error("Error deleting image from Cloudinary:", cloudinaryError);
+      // Continue with database deletion even if Cloudinary deletion fails
+    }
 
+    // Delete the image from the database
     await db.productImage.delete({ where: { id: image.id } });
 
     res.status(200).json({ message: "Product image deleted successfully." });

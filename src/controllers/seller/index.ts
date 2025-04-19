@@ -192,7 +192,7 @@ async function getSellerSalesStatistics(req: Request, res: Response) {
 
     const orderItems = await db.orderItem.findMany({
       where: {
-        product: { sellerId },
+        sellerId,
         createdAt: { gte: startOfWeek },
       },
       include: { product: true },

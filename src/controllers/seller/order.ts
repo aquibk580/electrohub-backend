@@ -17,7 +17,7 @@ async function getAllOrdersData(req: Request, res: Response) {
       where: {
         orderItems: {
           some: {
-            product: { sellerId },
+            sellerId,
           },
         },
       },
@@ -28,7 +28,11 @@ async function getAllOrdersData(req: Request, res: Response) {
           orderBy: { createdAt: "desc" },
           include: {
             product: {
-              include: { seller: true, images: true, productInfo: true },
+              include: {
+                seller: true,
+                images: true,
+                productInfo: true,
+              },
             },
           },
         },

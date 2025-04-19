@@ -201,7 +201,7 @@ export async function getSingleOrder(req: Request, res: Response) {
       return;
     }
 
-    const sellerId = orderItem.product?.seller?.id;
+    const sellerId = orderItem.sellerId;
     let averageRating: number | null = null;
     let totalOrders: number | null = null;
 
@@ -221,9 +221,7 @@ export async function getSingleOrder(req: Request, res: Response) {
 
       const totalSellerOrders = await db.orderItem.count({
         where: {
-          product: {
-            sellerId,
-          },
+          sellerId,
         },
       });
 

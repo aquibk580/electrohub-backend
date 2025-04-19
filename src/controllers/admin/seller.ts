@@ -125,9 +125,7 @@ async function getSingleSeller(req: Request, res: Response) {
 
     const orders = await db.orderItem.findMany({
       where: {
-        productId: {
-          in: productIds,
-        },
+        sellerId: SellerId,
       },
       include: {
         product: {
