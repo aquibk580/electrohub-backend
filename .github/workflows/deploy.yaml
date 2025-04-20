@@ -1,0 +1,106 @@
+name: Deploy Express.js to AWS EC2
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    # Step 1: Checkout Code
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    # Step 2: Setup SSH Key
+    - name: Setup SSH Key
+      run: |
+        echo "${{ secrets.AWS_PRIVATE_KEY }}" > private_key.pem
+        chmod 600 private_key.pem
+
+    # Step 3: Deploy to EC2
+    - name: Deploy to EC2
+      run: |
+        # ssh -o StrictHostKeyChecking=no -i private_key.pem ${{ secrets.AWS_EC2_USERNAME }}@${{ secrets.AWS_EC2_HOST }} << 'EOF'
+        ssh -o StrictHostKeyChecking=no -i private_key.pem ubuntu@${{ secrets.AWS_EC2_HOST }} << 'EOF'
+          
+          # Step 3.1: Navigate to app directory (or clone if not exists)
+          if [ ! -d "/var/www/express-server" ]; then
+            sudo mkdir -p /var/www
+            cd /var/www
+            sudo git clone https://github.com/aquibk580/electrohub-backend.git express-server
+          else
+            cd /var/www/express-server
+            sudo git reset --hard HEAD
+            sudo git pull origin main
+          fi
+
+          # Step 3.2: Set Correct Permissions for Project Directory
+          sudo chown -R $USER:$USER /var/www/express-server
+          sudo chmod -R 755 /var/www/express-server
+
+          # Step 3.3: Install Node.js and npm (from official source)
+          if ! command -v node &> /dev/null; then
+            curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+            sudo apt install -y nodejs
+          fi
+          sudo npm install -g pm2
+
+          # Step 3.4: Install Dependencies (with --unsafe-perm)
+          cd /var/www/express-server
+          npx prisma generate -y
+          npm install --unsafe-perm
+
+          # Step 3.5: Install TypeScript and ts-node (if not installed)
+          sudo npm install -g typescript ts-node
+
+          # Step 3.6: Compile TypeScript
+          npx tsc
+
+          # Step 3.7: Fix Permissions for Compiled Files
+          sudo chown -R $USER:$USER /var/www/express-server/dist
+
+          # Step 3.8: Kill Process on Port Conflict and Start with PM2
+          sudo fuser -k 8000/tcp || true
+          pm2 delete express-server || true
+          pm2 start pm2.config.cjs
+          pm2 save
+          pm2 startup
+
+          # Step 3.9: Install and Configure Nginx
+          # if ! command -v nginx &> /dev/null; then
+          #   sudo apt install -y nginx
+          # fi
+
+          # Write Nginx config
+          # sudo tee /etc/nginx/sites-available/express-server > /dev/null <<EOL
+          # server {
+          #     listen 80;
+          #     server_name ${{ secrets.AWS_EC2_HOST }};
+
+          #     location / {
+          #         proxy_pass http://localhost:8000;
+          #         proxy_set_header Host \$host;
+          #         proxy_set_header X-Real-IP \$remote_addr;
+          #         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+          #     }
+          # }
+          # EOL
+
+          # Create symlink and restart Nginx (AFTER ending heredoc)
+        #   sudo ln -sf /etc/nginx/sites-available/express-server /etc/nginx/sites-enabled/
+        #   sudo nginx -t
+        #   sudo systemctl reload nginx || sudo systemctl restart nginx
+
+        #   # Step 3.10: Set Correct Permissions and Enable Firewall
+        #   sudo chown -R $USER:$USER /var/www/express-server
+        #   sudo ufw allow 'Nginx Full'
+        #   sudo ufw allow OpenSSH
+        #   sudo ufw allow 9000
+        # EOF
+
+    # Step 4: Clean Up
+    - name: Clean up
+      run: rm -f private_key.pem
