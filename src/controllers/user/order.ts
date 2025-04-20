@@ -62,6 +62,13 @@ async function placeOrder(req: Request, res: Response) {
 
 async function verifyPayment(req: Request, res: Response) {
   try {
+    if (!req.user) {
+      res.status(401).json({ success: false, message: "Unauthorized" });
+      return;
+    }
+
+    const userId = parseInt((req.user as UserPayload).id);
+
     const {
       razorpay_order_id,
       razorpay_payment_id,
@@ -82,7 +89,6 @@ async function verifyPayment(req: Request, res: Response) {
       return;
     }
 
-    const userId = parseInt((req.user as UserPayload).id);
     let total: number;
     let items: { productId: number; quantity: number }[];
 
