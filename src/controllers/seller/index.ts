@@ -6,6 +6,12 @@ import cloudinary, { uploadToCloudinary } from "../../lib/cloudinary.js";
 import { UserPayload } from "../../types/Payload.js";
 import { startOfDay, subDays } from "date-fns";
 
+const extractPublicId = (url: string): string => {
+  const parts = url.split("/");
+  const publicIdwithExtension = parts[parts.length - 1];
+  return publicIdwithExtension.split(".")[0];
+};
+
 interface Seller {
   id: number;
   name: string;
@@ -28,35 +34,60 @@ async function deleteAccount(req: Request, res: Response): Promise<void> {
   }
 
   try {
-    const seller: Seller | null = await db.seller.findUnique({
-      where: {
-        id: sellerId,
-      },
+    const seller = await db.seller.findUnique({
+      where: { id: sellerId },
     });
 
     if (!seller) {
       res.status(404).json({ error: "Seller not found" });
       return;
     }
-    const deletedseller: Seller = await db.seller.delete({
-      where: {
-        id: sellerId,
-      },
+
+    const products = await db.product.findMany({
+      where: { sellerId },
+      select: { id: true },
+    });
+
+    const productIds = products.map((p) => p.id);
+
+    if (productIds.length > 0) {
+      const images = await db.productImage.findMany({
+        where: { productId: { in: productIds } },
+        select: { id: true, url: true },
+      });
+
+      await Promise.all(
+        images.map((img) => {
+          const publicId = extractPublicId(img.url);
+          return cloudinary.uploader.destroy(publicId);
+        })
+      );
+
+      await db.productImage.deleteMany({
+        where: { id: { in: images.map((i) => i.id) } },
+      });
+
+      await db.product.deleteMany({
+        where: { id: { in: productIds } },
+      });
+    }
+
+    const deletedSeller = await db.seller.delete({
+      where: { id: sellerId },
     });
 
     res.clearCookie("token", { httpOnly: true, secure: true });
 
     res.status(200).json({
-      message: `Seller account of ${deletedseller.name} deleted successfully`,
-      seller: deletedseller,
+      message: `Seller account of ${deletedSeller.name} deleted successfully`,
+      seller: deletedSeller,
     });
-    return;
   } catch (error: any) {
     console.log("ERROR_WHILE_DELETING_ACCOUNT", error.message);
-    res
-      .status(500)
-      .json({ error: "Internal Server Error", details: error.message });
-    return;
+    res.status(500).json({
+      error: "Internal Server Error",
+      details: error.message,
+    });
   }
 }
 
@@ -114,11 +145,6 @@ const sellerSchema: ZodSchema = z.object({
     .optional(),
 });
 
-const extractPublicId = (url: string): string => {
-  const parts = url.split("/");
-  const publicIdwithExtension = parts[parts.length - 1];
-  return publicIdwithExtension.split(".")[0];
-};
 // Update seller details
 async function updateSellerDetails(req: Request, res: Response) {
   const { id } = req.params;

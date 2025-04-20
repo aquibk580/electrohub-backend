@@ -6,9 +6,14 @@ async function getAllProducts(req: Request, res: Response) {
   try {
     const products = await db.product.findMany({
       include: {
-        images: true,
+        images: {
+          take: 1,
+          orderBy: {
+            id: "asc",
+          },
+        },
       },
-      orderBy: { createdAt:"desc" },
+      orderBy: { createdAt: "desc" },
     });
 
     if (products.length === 0) {
@@ -197,5 +202,5 @@ export {
   getTopSellingProducts,
   getProductStats,
   getSingleProduct,
-  updateProductStatus
+  updateProductStatus,
 };

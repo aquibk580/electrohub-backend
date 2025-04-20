@@ -16,7 +16,7 @@ type OrderItemWithProduct = {
 
 let cachedStats: any = null;
 let cacheTimestamp: number = 0;
-const CACHE_DURATION = 3 * 60 * 60 * 1000; // 3 hours to revalidate
+const CACHE_DURATION = 1 * 60 * 60 * 1000; // 1 hours to revalidate
 
 export async function getSalesStatistics(req: Request, res: Response) {
   try {
@@ -128,7 +128,12 @@ export async function getOrdersData(req: Request, res: Response) {
         },
         product: {
           include: {
-            images: true,
+            images: {
+              take: 1,
+              orderBy: {
+                id: "asc",
+              },
+            },
           },
         },
       },

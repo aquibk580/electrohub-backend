@@ -261,11 +261,18 @@ async function getSingleOrder(req: Request, res: Response) {
         product: {
           include: {
             seller: true,
-            images: true,
+            images: {
+              take: 1,
+              orderBy: {
+                id: "asc",
+              },
+            },
           },
         },
       },
     });
+
+
 
     if (!orderItem) {
       res.status(404).json({ error: "Order item not found" });
@@ -324,7 +331,12 @@ async function updateOrderStatus(req: Request, res: Response) {
       include: {
         product: {
           include: {
-            images: true,
+            images: {
+              take: 1,
+              orderBy: {
+                id: "asc",
+              },
+            },
           },
         },
       },
