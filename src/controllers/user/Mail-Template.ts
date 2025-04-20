@@ -1,6 +1,7 @@
 import { formatDate, formatPrice } from "../../lib/utils.js";
 import { Order, OrderItem, User } from "../../types/entityTypes";
 
+
 const getOrderCancelledTemplate = (data: { order: OrderItem; user: User }) => {
   console.log(data)
   return `

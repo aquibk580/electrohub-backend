@@ -12,9 +12,9 @@ import {
 } from "./Mail-Template.js";
 
 // Refined union types
-type OrderEmailData = {
+type OrderEmailData = Order & {
   type: "OrderConfirmed";
-  order: Order;
+  user: User;
 };
 
 type ItemUserEmailData = {
@@ -32,27 +32,40 @@ export async function sendEmail(data: EmailData) {
     let subject;
 
     if (data.type === "OrderConfirmed") {
-      to = data.order.user.email;
-      htmlContent = getOrdderConfirmTemplate(data.order);
+      const user = data.user;
+      to = user.email;
+      htmlContent = getOrdderConfirmTemplate(data);
       subject = "Order Confirmed Successfully";
     } else {
       to = data.user.email;
 
       switch (data.type) {
         case "Cancelled":
-          htmlContent = getOrderCancelledTemplate({ order: data.order, user: data.user });
+          htmlContent = getOrderCancelledTemplate({
+            order: data.order,
+            user: data.user,
+          });
           subject = "Order Cancelled";
           break;
         case "Returned":
-          htmlContent = getOrderReturnedTemplate({ order: data.order, user: data.user });
+          htmlContent = getOrderReturnedTemplate({
+            order: data.order,
+            user: data.user,
+          });
           subject = "Order Returned";
           break;
         case "Shipped":
-          htmlContent = getOrderShippedTemplate({ order: data.order, user: data.user });
+          htmlContent = getOrderShippedTemplate({
+            order: data.order,
+            user: data.user,
+          });
           subject = "Order Shipped";
           break;
         case "Delivered":
-          htmlContent = getOrderDeliveredTemplate({ order: data.order, user: data.user });
+          htmlContent = getOrderDeliveredTemplate({
+            order: data.order,
+            user: data.user,
+          });
           subject = "Order Delivered";
           break;
       }
@@ -82,4 +95,3 @@ export async function sendEmail(data: EmailData) {
     };
   }
 }
-

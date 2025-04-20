@@ -15,7 +15,7 @@ const razorpay = new Razorpay({
 
 interface OrderInput {
   total: string;
-  items: [{ productId: string; quantity: string }];
+  items: [{ productId: string; quantity: string; sellerId: number }];
 }
 
 const orderSchema: ZodSchema = z.object({
@@ -31,6 +31,7 @@ const orderSchema: ZodSchema = z.object({
       z.object({
         productId: z.number().min(1, "Product is required"),
         quantity: z.number().min(1, "Quantity must be at least 1"),
+        sellerId: z.number().min(1, "Seller Id is required"),
       })
     )
     .min(1, "At least one product is required"),
@@ -90,18 +91,18 @@ async function verifyPayment(req: Request, res: Response) {
     }
 
     let total: number;
-    let items: { productId: number; quantity: number }[];
+    let items: { productId: number; quantity: number; sellerId: number }[];
 
     if (flag === "buy") {
       if (!orderData || !orderData.items || orderData.items.length === 0) {
         res.status(400).json({ success: false, message: "Invalid order data" });
         return;
       }
-
       total = parseInt(orderData.total, 10);
       items = orderData.items.map((item: any) => ({
         productId: parseInt(item.productId),
         quantity: parseInt(item.quantity),
+        sellerId: parseInt(item.sellerId),
       }));
     } else if (flag === "cart") {
       // "Cart Checkout" scenario: Fetch order from the cart
@@ -122,6 +123,7 @@ async function verifyPayment(req: Request, res: Response) {
       items = cart.items.map((cartItem) => ({
         productId: cartItem.product.id,
         quantity: cartItem.quantity,
+        sellerId: cartItem.product.sellerId,
       }));
 
       // Clear the cart only if it's a cart checkout
@@ -142,6 +144,7 @@ async function verifyPayment(req: Request, res: Response) {
           create: items.map((item) => ({
             productId: item.productId,
             quantity: item.quantity,
+            sellerId: item.sellerId,
           })),
         },
       },
