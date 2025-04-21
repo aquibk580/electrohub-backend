@@ -155,15 +155,17 @@ router.get(
 
       res.cookie("token", token, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
+        secure: true,
         maxAge: 7 * 24 * 60 * 60 * 1000,
-        sameSite: "lax",
+        sameSite: "none",
       });
 
       if (info.isNew) {
-        if(info.isNew === "seller"){
-          res.redirect(`${process.env.FRONTEND_URL}/seller/auth/seller-details`);
-        }else if(info.isNew === "user"){
+        if (info.isNew === "seller") {
+          res.redirect(
+            `${process.env.FRONTEND_URL}/seller/auth/seller-details`
+          );
+        } else if (info.isNew === "user") {
           res.redirect(`${process.env.FRONTEND_URL}/user/auth/user-details`);
         }
       } else {
@@ -277,8 +279,8 @@ router.get("/logout", isLoggedIn, (req: Request, res: Response) => {
   try {
     res.clearCookie("token", {
       httpOnly: true,
-      secure: false,
-      sameSite: "lax",
+      secure: true,
+      sameSite: "none",
     });
     res.status(200).json({ message: "Logged Out successfully" });
     return;

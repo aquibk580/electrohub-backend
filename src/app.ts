@@ -27,12 +27,7 @@ const limiter = rateLimit({
 });
 
 // Middlewares
-app.use(morgan("dev"));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(cookieParser());
 const allowedOrigins = ["http://localhost:5173", "https://electrohubb.shop"];
-
 app.use(
   cors({
     origin: function (origin, callback) {
@@ -45,6 +40,10 @@ app.use(
     credentials: true,
   })
 );
+app.use(morgan("dev"));
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
 
 app.use(passport.initialize());
 app.use(limiter);

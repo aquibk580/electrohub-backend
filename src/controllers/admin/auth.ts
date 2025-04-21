@@ -69,8 +69,8 @@ async function adminSignup(req: Request, res: Response): Promise<void> {
 
     res.cookie("adminToken", adminToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: process.env.NODE_ENV === "production" ? "strict" : "lax",
+      secure: true,
+      sameSite: "none",
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
@@ -132,8 +132,8 @@ async function adminSignin(req: Request, res: Response): Promise<void> {
 
     res.cookie("adminToken", adminToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: process.env.NODE_ENV === "production" ? "strict" : "lax",
+      secure: true,
+      sameSite: "none",
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
@@ -226,8 +226,8 @@ function adminLogout(req: Request, res: Response) {
   try {
     res.clearCookie("adminToken", {
       httpOnly: true,
-      secure: false,
-      sameSite: "lax",
+      secure: true,
+      sameSite: "none",
     });
     res.status(200).json({ message: "Logged Out successfully" });
     return;
