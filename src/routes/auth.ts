@@ -44,7 +44,7 @@ interface CustomUser {
 const googleStrategyOptions: GoogleStrategyOptions = {
   clientID: process.env.GOOGLE_CLIENT_ID as string,
   clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
-  callbackURL: "/api/auth/google/callback",
+  callbackURL: process.env.REACT_APP_API_URL as string,
   scope: ["profile", "email"],
   passReqToCallback: true,
 };
