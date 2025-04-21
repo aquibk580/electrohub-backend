@@ -27,7 +27,7 @@ const limiter = rateLimit({
 });
 
 // Middlewares
-const allowedOrigins = ["http://localhost:5173", "https://electrohubb.shop"];
+const allowedOrigins = ["http://localhost:5173", "https://electrohubb.shop","https://www.electrohubb.shop" ];
 app.use(
   cors({
     origin: function (origin, callback) {
